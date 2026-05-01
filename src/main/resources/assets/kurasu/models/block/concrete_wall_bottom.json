@@ -1,0 +1,33 @@
+{
+  "textures": {
+    "wall": "kurasu:block/concete",
+    "trim": "kurasu:block/wood",
+    "particle": "kurasu:block/concete"
+  },
+  "elements": [
+    {
+      "from": [0, 0, 0],
+      "to": [16, 16, 16],
+      "faces": {
+        "north": { "uv": [0, 0, 16, 16], "texture": "#wall" },
+        "east": { "uv": [0, 0, 16, 16], "texture": "#wall" },
+        "south": { "uv": [0, 0, 16, 16], "texture": "#wall" },
+        "west": { "uv": [0, 0, 16, 16], "texture": "#wall" },
+        "up": { "uv": [0, 0, 16, 16], "texture": "#wall" },
+        "down": { "uv": [0, 0, 16, 16], "texture": "#wall" }
+      }
+    },
+    {
+      "from": [0, 0, -2],
+      "to": [16, 2, 0],
+      "faces": {
+        "north": { "uv": [0, 0, 16, 2], "texture": "#trim" },
+        "east": { "uv": [2, 0, 4, 2], "texture": "#trim" },
+        "south": { "uv": [0, 0, 16, 2], "texture": "#trim" },
+        "west": { "uv": [0, 0, 2, 2], "texture": "#trim" },
+        "up": { "uv": [0, 0, 16, 2], "texture": "#trim" },
+        "down": { "uv": [0, 2, 16, 4], "texture": "#trim" }
+      }
+    }
+  ]
+}

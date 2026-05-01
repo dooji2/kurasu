@@ -1,0 +1,6 @@
+# Made in Blockbench 5.1.4
+newmtl m_c6aa6d61-07be-a93b-d490-0d3a1127132c
+map_Kd book_cover.png
+newmtl m_721c0dd7-f8e7-3cc9-f1aa-7fe0c10da538
+map_Kd pages.png
+newmtl none

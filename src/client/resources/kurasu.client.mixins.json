@@ -3,6 +3,9 @@
 	"package": "com.dooji.kurasu.client.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
+		"KeyboardHandlerMixin",
+		"MinecraftMixin",
+		"MouseHandlerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

@@ -1,0 +1,8 @@
+# Made in Blockbench 5.1.4
+newmtl m_95b8c431-1115-8f2b-5c6b-a39291e95e55
+map_Kd large_locker.png
+newmtl m_34c2f55b-cb2b-f5fe-db3e-919c794f2c94
+map_Kd large_locker_side.png
+newmtl m_75615ec7-226a-bf2a-d2da-1402d0d81f5a
+map_Kd locker.png
+newmtl none

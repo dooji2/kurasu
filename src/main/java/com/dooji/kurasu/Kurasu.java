@@ -1,24 +1,22 @@
 package com.dooji.kurasu;
 
 import net.fabricmc.api.ModInitializer;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class Kurasu implements ModInitializer {
 	public static final String MOD_ID = "kurasu";
-
-	// This logger is used to write text to the console and the log file.
-	// It is considered best practice to use your mod id as the logger's name.
-	// That way, it's clear which mod wrote info, warnings, and errors.
+	public static final String STICKY_NOTE_ACCESSORY_ID = MOD_ID + ":sticky_note";
+	public static final String BOOK_1_ACCESSORY_ID = MOD_ID + ":book_1";
+	public static final String BLACKBOARD_DRAW_ID = MOD_ID + ":blackboard_draw";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
 	@Override
 	public void onInitialize() {
-		// This code runs as soon as Minecraft is in a mod-load-ready state.
-		// However, some things (like resources) may still be uninitialized.
-		// Proceed with mild caution.
-
-		LOGGER.info("Hello Fabric world!");
+		KurasuBlocks.init();
+		KurasuItems.init();
+		KurasuBlockEntityTypes.init();
+		KurasuCreativeTabs.init();
+		KurasuNetworking.init();
 	}
 }
