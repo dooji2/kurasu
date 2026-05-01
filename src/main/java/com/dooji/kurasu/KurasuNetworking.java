@@ -5,6 +5,7 @@ import com.dooji.kurasu.block.entity.BlackboardBlockEntity;
 import com.dooji.kurasu.block.entity.LockerBlockEntity;
 import com.dooji.kurasu.block.entity.SafeBlockEntity;
 import com.dooji.kurasu.item.DrawData;
+import com.dooji.kurasu.network.DrawBlackboardPixelPayload;
 import com.dooji.kurasu.network.FinishLockpickPayload;
 import com.dooji.kurasu.network.PlaceAccessoryPayload;
 import com.dooji.kurasu.network.PickUpAccessoryPayload;
@@ -21,12 +22,14 @@ import net.minecraft.world.item.ItemStack;
 
 public class KurasuNetworking {
 	public static void init() {
+		PayloadTypeRegistry.serverboundPlay().register(DrawBlackboardPixelPayload.TYPE, DrawBlackboardPixelPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(FinishLockpickPayload.TYPE, FinishLockpickPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(PlaceAccessoryPayload.TYPE, PlaceAccessoryPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(PickUpAccessoryPayload.TYPE, PickUpAccessoryPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(SaveBlackboardPayload.TYPE, SaveBlackboardPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(SaveStickyNotePayload.TYPE, SaveStickyNotePayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(SubmitSafeActionPayload.TYPE, SubmitSafeActionPayload.CODEC);
+		ServerPlayNetworking.registerGlobalReceiver(DrawBlackboardPixelPayload.TYPE, (payload, context) -> context.server().execute(() -> drawBlackboardPixel(context.player(), payload)));
 		ServerPlayNetworking.registerGlobalReceiver(FinishLockpickPayload.TYPE, (payload, context) -> context.server().execute(() -> finishLockpick(context.player(), payload)));
 		ServerPlayNetworking.registerGlobalReceiver(PlaceAccessoryPayload.TYPE, (payload, context) -> context.server().execute(() -> placeAccessory(context.player(), payload)));
 		ServerPlayNetworking.registerGlobalReceiver(PickUpAccessoryPayload.TYPE, (payload, context) -> context.server().execute(() -> pickUpAccessory(context.player(), payload)));
@@ -58,6 +61,18 @@ public class KurasuNetworking {
 		if (!player.getAbilities().instabuild) {
 			player.getMainHandItem().hurtAndBreak(1, player.level(), player, item -> {
 			});
+		}
+	}
+
+	private static void drawBlackboardPixel(ServerPlayer player, DrawBlackboardPixelPayload payload) {
+		Integer color = KurasuItems.getChalkColor(player.getMainHandItem());
+
+		if (color == null || tooFar(player, payload.blockPos(), 4.0)) {
+			return;
+		}
+
+		if (player.level().getBlockEntity(payload.blockPos()) instanceof BlackboardBlockEntity blackboard) {
+			blackboard.setPixel(payload.x(), payload.y(), color);
 		}
 	}
 

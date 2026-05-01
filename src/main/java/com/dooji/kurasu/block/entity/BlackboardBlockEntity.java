@@ -37,6 +37,10 @@ public class BlackboardBlockEntity extends AccessoryBlockEntity {
 		}
 	}
 
+	public void setPixel(int x, int y, int color) {
+		this.setDrawData(this.drawData.withPixel(x, y, color));
+	}
+
 	@Override
 	protected void loadAdditional(ValueInput input) {
 		super.loadAdditional(input);

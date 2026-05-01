@@ -29,6 +29,7 @@ import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.util.Mth;
 import org.joml.Vector3f;
 
 public class ObjModels {
@@ -102,6 +103,38 @@ public class ObjModels {
 			case "book_1" -> book1Mesh;
 			default -> null;
 		};
+	}
+
+	public static int[] blackboardPixel(Vector3f localPosition) {
+		if (blackboardMesh == null || blackboardMesh.blackboardFaces.isEmpty()) {
+			return null;
+		}
+
+		MeshFace face = blackboardMesh.blackboardFaces.getFirst();
+		if (face.vertices.size() != 4) {
+			return null;
+		}
+
+		MeshVertex origin = face.vertices.get(0);
+		MeshVertex tangentVertex = face.vertices.get(1);
+		MeshVertex bitangentVertex = face.vertices.get(3);
+		Vector3f tangent = new Vector3f(tangentVertex.position).sub(origin.position);
+		Vector3f bitangent = new Vector3f(bitangentVertex.position).sub(origin.position);
+		float tangentLengthSquared = tangent.lengthSquared();
+		float bitangentLengthSquared = bitangent.lengthSquared();
+
+		if (tangentLengthSquared <= 0.000001f || bitangentLengthSquared <= 0.000001f) {
+			return null;
+		}
+
+		Vector3f offset = new Vector3f(localPosition).sub(origin.position);
+		float uLerp = offset.dot(tangent) / tangentLengthSquared;
+		float vLerp = offset.dot(bitangent) / bitangentLengthSquared;
+		float u = Mth.lerp(Mth.clamp(uLerp, 0.0f, 1.0f), origin.u, tangentVertex.u);
+		float v = Mth.lerp(Mth.clamp(vLerp, 0.0f, 1.0f), origin.v, bitangentVertex.v);
+		int x = Mth.clamp((int) (u * 60.0f), 0, 59);
+		int y = Mth.clamp((int) (v * 28.0f), 0, 27);
+		return new int[] {x, y};
 	}
 
 	public static ObjMesh getSurfaceMesh(BlockState state) {

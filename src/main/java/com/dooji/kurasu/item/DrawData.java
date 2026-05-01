@@ -74,6 +74,21 @@ public final class DrawData {
 		return new DrawData(normalizedWidth, normalizedHeight, normalizedPixels);
 	}
 
+	public DrawData withPixel(int x, int y, int color) {
+		if (x < 0 || y < 0 || x >= this.width || y >= this.height) {
+			return this;
+		}
+
+		int index = x + y * this.width;
+		if (this.pixels[index] == color) {
+			return this;
+		}
+
+		int[] copy = Arrays.copyOf(this.pixels, this.pixels.length);
+		copy[index] = color;
+		return new DrawData(this.width, this.height, copy);
+	}
+
 	public CompoundTag toTag() {
 		CompoundTag tag = new CompoundTag();
 		tag.putInt("width", this.width);

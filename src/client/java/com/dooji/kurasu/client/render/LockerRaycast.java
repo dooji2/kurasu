@@ -320,12 +320,20 @@ public class LockerRaycast {
 			return this.blockPos;
 		}
 
+		public String partName() {
+			return this.partName;
+		}
+
 		public boolean isAccessoryHit() {
 			return this.accessoryIndex >= 0;
 		}
 
 		public int accessoryIndex() {
 			return this.accessoryIndex;
+		}
+
+		public Vector3f localPosition() {
+			return new Vector3f(this.localPosition);
 		}
 
 		public AccessoryBlockEntity.PlacedAccessory toPlacedAccessory(String accessoryId, ItemStack itemStack) {

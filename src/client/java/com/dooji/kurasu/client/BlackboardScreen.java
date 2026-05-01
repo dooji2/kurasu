@@ -1,5 +1,6 @@
 package com.dooji.kurasu.client;
 
+import com.dooji.kurasu.KurasuItems;
 import com.dooji.kurasu.block.BlackboardBlock;
 import com.dooji.kurasu.block.entity.BlackboardBlockEntity;
 import com.dooji.kurasu.item.DrawData;
@@ -22,6 +23,10 @@ public class BlackboardScreen extends DrawScreen {
 		Minecraft minecraft = Minecraft.getInstance();
 
 		if (minecraft.player == null || minecraft.level == null || minecraft.screen != null || !(minecraft.hitResult instanceof BlockHitResult hitResult)) {
+			return false;
+		}
+
+		if (KurasuItems.getChalkColor(minecraft.player.getMainHandItem()) != null) {
 			return false;
 		}
 
