@@ -90,6 +90,20 @@ public class ObjModels {
 		};
 	}
 
+	public static ObjMesh getItemMesh(Identifier blockId) {
+		String path = blockId.getPath();
+
+		return switch (path) {
+			case "locker" -> lockerSingleMesh;
+			case "safe" -> safeMesh;
+			case "blackboard" -> blackboardMesh;
+			case "chair" -> chairMesh;
+			case "desk" -> deskMesh;
+			case "book_1" -> book1Mesh;
+			default -> null;
+		};
+	}
+
 	public static ObjMesh getSurfaceMesh(BlockState state) {
 		if (state.getBlock() instanceof LockerBlock) {
 			return getLockerMesh(state.getValue(LockerBlock.PART));

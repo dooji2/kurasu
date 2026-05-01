@@ -1,0 +1,10 @@
+{
+  "model": {
+    "type": "minecraft:special",
+    "base": "kurasu:item/obj_block_base",
+    "model": {
+      "type": "kurasu:obj_block_item",
+      "model_id": "kurasu:chair"
+    }
+  }
+}
