@@ -1,6 +1,10 @@
 {
   "model": {
-    "type": "minecraft:model",
-    "model": "kurasu:item/sticky_note"
+    "type": "minecraft:special",
+    "base": "kurasu:item/obj_block_base",
+    "model": {
+      "type": "kurasu:obj_block_item",
+      "model_id": "kurasu:sticky_note"
+    }
   }
 }

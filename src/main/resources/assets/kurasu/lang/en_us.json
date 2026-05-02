@@ -22,6 +22,8 @@
 	"gui.kurasu.lock": "Lock",
 	"gui.kurasu.change_code": "Change Code",
 	"gui.kurasu.lockpick_hint": "Keep it centered",
+	"gui.kurasu.draw_hint_mouse": "LMB: draw   RMB: pan",
+	"gui.kurasu.draw_hint_scroll": "Scroll: zoom   Ctrl+Scroll: brush %sx%s",
 	"message.kurasu.locker_locked": "Locked.",
 	"message.kurasu.locker_unlocked": "Unlocked.",
 	"message.kurasu.safe_locked": "Safe locked.",

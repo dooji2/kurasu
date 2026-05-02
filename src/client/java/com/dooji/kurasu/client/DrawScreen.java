@@ -22,6 +22,7 @@ public abstract class DrawScreen extends Screen {
 	private static final Identifier ERASER_ICON = Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "textures/gui/icons/eraser.png");
 	private static final Identifier UP_ICON = Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "textures/gui/icons/up.png");
 	private static final Identifier DOWN_ICON = Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "textures/gui/icons/down.png");
+	private static final int HINT_TEXT = 0xFFF2F2F2;
 	private static final int MAX_ZOOM = 24;
 	private static final int[] BLACKBOARD_COLORS = {0xFFFFFFFF};
 	private static final int[] STICKY_NOTE_COLORS = {
@@ -84,7 +85,7 @@ public abstract class DrawScreen extends Screen {
 	@Override
 	protected void init() {
 		this.guiX = (this.width - 250) / 2;
-		this.guiY = (this.height - 180) / 2;
+		this.guiY = (this.height - 196) / 2;
 		if (this.guiX < 12) {
 			this.guiX = 12;
 		}
@@ -283,6 +284,7 @@ public abstract class DrawScreen extends Screen {
 			this.canvasWidth,
 			this.canvasHeight
 		);
+		this.drawHints(gfx);
 
 		if (previewVisible) {
 			int centerX = this.mouseToCanvasX(mouseX) - this.brushSize / 2;
@@ -358,6 +360,15 @@ public abstract class DrawScreen extends Screen {
 	}
 
 	protected abstract void save(int width, int height, int[] pixels);
+
+	private void drawHints(GuiGraphicsExtractor gfx) {
+		int lineHeight = 9;
+		int centerX = this.guiX + 125;
+		int textTop = this.guiY + 184;
+
+		gfx.centeredText(this.font, Component.translatable("gui.kurasu.draw_hint_mouse"), centerX, textTop, HINT_TEXT);
+		gfx.centeredText(this.font, Component.translatable("gui.kurasu.draw_hint_scroll", this.brushSize, this.brushSize), centerX, textTop + lineHeight, HINT_TEXT);
+	}
 
 	private void drawArrowButton(GuiGraphicsExtractor gfx, int x, int y, boolean hovered, Identifier icon) {
 		gfx.blit(RenderPipelines.GUI_TEXTURED, DRAW_SCREEN_TEXTURE, x, y, 250, hovered ? 27 : 10, 10, 7, 10, 7, 260, 180);

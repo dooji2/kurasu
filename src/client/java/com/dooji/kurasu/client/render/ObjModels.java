@@ -100,6 +100,7 @@ public class ObjModels {
 			case "blackboard" -> blackboardMesh;
 			case "chair" -> chairMesh;
 			case "desk" -> deskMesh;
+			case "sticky_note" -> stickyNoteMesh;
 			case "book_1" -> book1Mesh;
 			default -> null;
 		};
