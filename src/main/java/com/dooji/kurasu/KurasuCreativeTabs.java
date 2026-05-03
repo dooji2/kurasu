@@ -7,10 +7,19 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
-class KurasuCreativeTabs {
-	private static final ResourceKey<CreativeModeTab> KURASU = ResourceKey.create(Registries.CREATIVE_MODE_TAB, Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "kurasu"));
+public class KurasuCreativeTabs {
+	public static final ResourceKey<CreativeModeTab> KURASU = ResourceKey.create(Registries.CREATIVE_MODE_TAB, Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "kurasu"));
+	private static final Item[] TAB_ICONS = {
+		KurasuBlocks.LOCKER_ITEM,
+		KurasuBlocks.BLACKBOARD_ITEM,
+		KurasuBlocks.CHAIR_ITEM,
+		KurasuBlocks.DESK_ITEM,
+		KurasuItems.CHALK,
+		KurasuItems.STICKY_NOTE
+	};
 
 	public static void init() {
 		Registry.register(
@@ -42,5 +51,14 @@ class KurasuCreativeTabs {
 				})
 				.build()
 		);
+	}
+
+	public static ItemStack createTabIcon() {
+		long index = (System.currentTimeMillis() / 1200L) % TAB_ICONS.length;
+		return new ItemStack(TAB_ICONS[(int) index]);
+	}
+
+	public static boolean isKurasuTab(CreativeModeTab tab) {
+		return BuiltInRegistries.CREATIVE_MODE_TAB.getResourceKey(tab).filter(KURASU::equals).isPresent();
 	}
 }
