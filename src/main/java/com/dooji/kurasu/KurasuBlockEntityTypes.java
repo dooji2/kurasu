@@ -16,7 +16,7 @@ public class KurasuBlockEntityTypes {
 	public static final BlockEntityType<LockerBlockEntity> LOCKER = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE,
 		Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "locker"),
-		FabricBlockEntityTypeBuilder.create(LockerBlockEntity::new, KurasuBlocks.LOCKER).build()
+		FabricBlockEntityTypeBuilder.create(LockerBlockEntity::new, KurasuBlocks.LOCKER, KurasuBlocks.LOCKER_1).build()
 	);
 	public static final BlockEntityType<SafeBlockEntity> SAFE = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE,
@@ -26,17 +26,17 @@ public class KurasuBlockEntityTypes {
 	public static final BlockEntityType<BlackboardBlockEntity> BLACKBOARD = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE,
 		Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "blackboard"),
-		FabricBlockEntityTypeBuilder.create(BlackboardBlockEntity::new, KurasuBlocks.BLACKBOARD).build()
+		FabricBlockEntityTypeBuilder.create(BlackboardBlockEntity::new, KurasuBlocks.BLACKBOARD, KurasuBlocks.BLACKBOARD_1).build()
 	);
 	public static final BlockEntityType<AccessoryBlockEntity> CHAIR = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE,
 		Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "chair"),
-		FabricBlockEntityTypeBuilder.create(KurasuBlockEntityTypes::createChair, KurasuBlocks.CHAIR).build()
+		FabricBlockEntityTypeBuilder.create(KurasuBlockEntityTypes::createChair, KurasuBlocks.CHAIR, KurasuBlocks.CHAIR_1).build()
 	);
 	public static final BlockEntityType<AccessoryBlockEntity> DESK = Registry.register(
 		BuiltInRegistries.BLOCK_ENTITY_TYPE,
 		Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "desk"),
-		FabricBlockEntityTypeBuilder.create(KurasuBlockEntityTypes::createDesk, KurasuBlocks.DESK).build()
+		FabricBlockEntityTypeBuilder.create(KurasuBlockEntityTypes::createDesk, KurasuBlocks.DESK, KurasuBlocks.DESK_1).build()
 	);
 
 	public static void init() {

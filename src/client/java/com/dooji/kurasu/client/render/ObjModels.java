@@ -1,5 +1,6 @@
 package com.dooji.kurasu.client.render;
 
+import com.dooji.kurasu.KurasuBlocks;
 import com.dooji.kurasu.Kurasu;
 import com.dooji.kurasu.block.BlackboardBlock;
 import com.dooji.kurasu.block.ChairBlock;
@@ -36,13 +37,22 @@ public class ObjModels {
 	private static final Identifier LOCKER_SINGLE_MODEL_ID = modelId("locker_single");
 	private static final Identifier LOCKER_DOUBLE_MODEL_ID = modelId("locker_double");
 	private static final Identifier LOCKER_BOTTOM_MODEL_ID = modelId("locker_bottom");
-	private static final Identifier LOCKER_MIDDLE_MODEL_ID = modelId("locker_middle");
-	private static final Identifier LOCKER_MIDDLE_1_MODEL_ID = modelId("locker_middle_1");
+	private static final Identifier LOCKER_MIDDLE_MODEL_ID = modelFileId("locker_middle_a_1", "locker_middle.obj");
+	private static final Identifier LOCKER_MIDDLE_1_MODEL_ID = modelFileId("locker_middle_b_1", "locker_middle_1.obj");
 	private static final Identifier LOCKER_TOP_MODEL_ID = modelId("locker_top");
+	private static final Identifier LOCKER_SINGLE_1_MODEL_ID = modelFileId("locker_single_1", "locker_single.obj");
+	private static final Identifier LOCKER_DOUBLE_1_MODEL_ID = modelFileId("locker_double_1", "locker_double.obj");
+	private static final Identifier LOCKER_BOTTOM_1_MODEL_ID = modelFileId("locker_bottom_1", "locker_bottom.obj");
+	private static final Identifier LOCKER_MIDDLE_A_2_MODEL_ID = modelFileId("locker_middle_a_2", "locker_middle.obj");
+	private static final Identifier LOCKER_MIDDLE_B_2_MODEL_ID = modelFileId("locker_middle_b_2", "locker_middle_1.obj");
+	private static final Identifier LOCKER_TOP_1_MODEL_ID = modelFileId("locker_top_1", "locker_top.obj");
 	private static final Identifier SAFE_MODEL_ID = modelId("safe");
 	private static final Identifier BLACKBOARD_MODEL_ID = modelId("blackboard");
+	private static final Identifier BLACKBOARD_1_MODEL_ID = modelFileId("blackboard_1", "blackboard.obj");
 	private static final Identifier CHAIR_MODEL_ID = modelId("chair");
+	private static final Identifier CHAIR_1_MODEL_ID = modelFileId("chair_1", "chair.obj");
 	private static final Identifier DESK_MODEL_ID = modelId("desk");
+	private static final Identifier DESK_1_MODEL_ID = modelFileId("desk_1", "desk.obj");
 	private static final Identifier STICKY_NOTE_MODEL_ID = modelId("sticky_note");
 	private static final Identifier BOOK_1_MODEL_ID = modelId("book_1");
 	private static final Identifier BLACKBOARD_DRAW_TEXTURE_ID = modelFileId("blackboard", "blackboad.png");
@@ -53,10 +63,19 @@ public class ObjModels {
 	private static ObjMesh lockerMiddleMesh;
 	private static ObjMesh lockerMiddle1Mesh;
 	private static ObjMesh lockerTopMesh;
+	private static ObjMesh lockerSingle1Mesh;
+	private static ObjMesh lockerDouble1Mesh;
+	private static ObjMesh lockerBottom1Mesh;
+	private static ObjMesh lockerMiddleA2Mesh;
+	private static ObjMesh lockerMiddleB2Mesh;
+	private static ObjMesh lockerTop1Mesh;
 	private static ObjMesh safeMesh;
 	private static ObjMesh blackboardMesh;
+	private static ObjMesh blackboard1Mesh;
 	private static ObjMesh chairMesh;
+	private static ObjMesh chair1Mesh;
 	private static ObjMesh deskMesh;
+	private static ObjMesh desk1Mesh;
 	static ObjMesh stickyNoteMesh;
 	static ObjMesh book1Mesh;
 
@@ -91,15 +110,33 @@ public class ObjModels {
 		};
 	}
 
+	private static ObjMesh getLockerMesh(BlockState state, LockerBlock.Part part) {
+		if (state.getBlock() == KurasuBlocks.LOCKER_1) {
+			return switch (part) {
+				case SINGLE -> lockerSingle1Mesh;
+				case BOTTOM -> lockerBottom1Mesh;
+				case MIDDLE -> lockerMiddleA2Mesh;
+				case MIDDLE_1 -> lockerMiddleB2Mesh;
+				case TOP -> lockerTop1Mesh;
+			};
+		}
+
+		return getLockerMesh(part);
+	}
+
 	public static ObjMesh getItemMesh(Identifier blockId) {
 		String path = blockId.getPath();
 
 		return switch (path) {
 			case "locker" -> lockerSingleMesh;
+			case "locker_1" -> lockerSingle1Mesh;
 			case "safe" -> safeMesh;
 			case "blackboard" -> blackboardMesh;
+			case "blackboard_1" -> blackboard1Mesh;
 			case "chair" -> chairMesh;
+			case "chair_1" -> chair1Mesh;
 			case "desk" -> deskMesh;
+			case "desk_1" -> desk1Mesh;
 			case "sticky_note" -> stickyNoteMesh;
 			case "book_1" -> book1Mesh;
 			default -> null;
@@ -140,7 +177,7 @@ public class ObjModels {
 
 	public static ObjMesh getSurfaceMesh(BlockState state) {
 		if (state.getBlock() instanceof LockerBlock) {
-			return getLockerMesh(state.getValue(LockerBlock.PART));
+			return getLockerMesh(state, state.getValue(LockerBlock.PART));
 		}
 
 		if (state.getBlock() instanceof SafeBlock) {
@@ -148,14 +185,26 @@ public class ObjModels {
 		}
 
 		if (state.getBlock() instanceof BlackboardBlock) {
+			if (state.getBlock() == KurasuBlocks.BLACKBOARD_1) {
+				return blackboard1Mesh;
+			}
+
 			return blackboardMesh;
 		}
 
 		if (state.getBlock() instanceof ChairBlock) {
+			if (state.getBlock() == KurasuBlocks.CHAIR_1) {
+				return chair1Mesh;
+			}
+
 			return chairMesh;
 		}
 
 		if (state.getBlock() instanceof DeskBlock) {
+			if (state.getBlock() == KurasuBlocks.DESK_1) {
+				return desk1Mesh;
+			}
+
 			return deskMesh;
 		}
 
@@ -172,10 +221,10 @@ public class ObjModels {
 		}
 
 		if (isDoubleBottom(level, pos, state)) {
-			return lockerDoubleMesh;
+			return state.getBlock() == KurasuBlocks.LOCKER_1 ? lockerDouble1Mesh : lockerDoubleMesh;
 		}
 
-		return getLockerMesh(state.getValue(LockerBlock.PART));
+		return getLockerMesh(state, state.getValue(LockerBlock.PART));
 	}
 
 	private static boolean isDoubleBottom(LevelReader level, BlockPos pos, BlockState state) {
@@ -210,10 +259,19 @@ public class ObjModels {
 		lockerMiddleMesh = loadObjModel(resourceManager, LOCKER_MIDDLE_MODEL_ID);
 		lockerMiddle1Mesh = loadObjModel(resourceManager, LOCKER_MIDDLE_1_MODEL_ID);
 		lockerTopMesh = loadObjModel(resourceManager, LOCKER_TOP_MODEL_ID);
+		lockerSingle1Mesh = loadObjModel(resourceManager, LOCKER_SINGLE_1_MODEL_ID);
+		lockerDouble1Mesh = loadObjModel(resourceManager, LOCKER_DOUBLE_1_MODEL_ID);
+		lockerBottom1Mesh = loadObjModel(resourceManager, LOCKER_BOTTOM_1_MODEL_ID);
+		lockerMiddleA2Mesh = loadObjModel(resourceManager, LOCKER_MIDDLE_A_2_MODEL_ID);
+		lockerMiddleB2Mesh = loadObjModel(resourceManager, LOCKER_MIDDLE_B_2_MODEL_ID);
+		lockerTop1Mesh = loadObjModel(resourceManager, LOCKER_TOP_1_MODEL_ID);
 		safeMesh = loadObjModel(resourceManager, SAFE_MODEL_ID);
 		blackboardMesh = loadObjModel(resourceManager, BLACKBOARD_MODEL_ID);
+		blackboard1Mesh = loadObjModel(resourceManager, BLACKBOARD_1_MODEL_ID);
 		chairMesh = loadObjModel(resourceManager, CHAIR_MODEL_ID);
+		chair1Mesh = loadObjModel(resourceManager, CHAIR_1_MODEL_ID);
 		deskMesh = loadObjModel(resourceManager, DESK_MODEL_ID);
+		desk1Mesh = loadObjModel(resourceManager, DESK_1_MODEL_ID);
 		stickyNoteMesh = loadObjModel(resourceManager, STICKY_NOTE_MODEL_ID);
 		book1Mesh = loadObjModel(resourceManager, BOOK_1_MODEL_ID);
 	}

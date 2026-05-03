@@ -1,9 +1,13 @@
 {
 	"item.kurasu.locker": "Locker",
+	"item.kurasu.locker_1": "Locker 1",
 	"item.kurasu.safe": "Safe",
 	"item.kurasu.blackboard": "Blackboard",
+	"item.kurasu.blackboard_1": "Blackboard 1",
 	"item.kurasu.chair": "Chair",
+	"item.kurasu.chair_1": "Chair 1",
 	"item.kurasu.desk": "Desk",
+	"item.kurasu.desk_1": "Desk 1",
 	"item.kurasu.concrete_wall": "Concrete Wall",
 	"item.kurasu.concrete_wall_bottom": "Concrete Wall (Bottom)",
 	"item.kurasu.concrete_wall_bottom_left": "Concrete Wall (Bottom Left Corner)",

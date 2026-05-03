@@ -1,0 +1,10 @@
+# Made in Blockbench 5.1.4
+newmtl m_b010e982-7818-1eca-6da1-aa550ee470aa
+map_Kd wood.png
+newmtl m_0baa174c-9bfb-7992-0363-cf0ab5eb32e6
+map_Kd test_1.png
+newmtl m_cdb3dd97-0399-81ac-ab66-6d5d248c3fb8
+map_Kd locker.png
+newmtl m_3847aa80-f2f9-6064-7d5b-bfa500838565
+map_Kd rubber.png
+newmtl none
