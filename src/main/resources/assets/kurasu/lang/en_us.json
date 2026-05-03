@@ -6,6 +6,8 @@
 	"item.kurasu.desk": "Desk",
 	"item.kurasu.concrete_wall": "Concrete Wall",
 	"item.kurasu.concrete_wall_bottom": "Concrete Wall (Bottom)",
+	"item.kurasu.concrete_wall_bottom_left": "Concrete Wall (Bottom Left Corner)",
+	"item.kurasu.concrete_wall_bottom_right": "Concrete Wall (Bottom Right Corner)",
 	"item.kurasu.sticky_note": "Sticky Note",
 	"item.kurasu.book_1": "Book",
 	"item.kurasu.key": "Key",
