@@ -5,7 +5,15 @@ import com.dooji.kurasu.block.entity.AccessoryBlockEntity;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.AreaEffectCloud;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Mirror;
@@ -16,6 +24,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
@@ -76,12 +87,120 @@ public class ChairBlock extends BaseEntityBlock {
 		return new AccessoryBlockEntity(KurasuBlockEntityTypes.CHAIR, pos, state);
 	}
 
+	@Override
+	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+		return trySit(state, level, pos, player);
+	}
+
+	@Override
+	protected InteractionResult useItemOn(ItemStack itemStack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
+		if (!itemStack.isEmpty()) {
+			return super.useItemOn(itemStack, state, level, pos, player, hand, hitResult);
+		}
+
+		return trySit(state, level, pos, player);
+	}
+
+	@Override
+	public void destroy(LevelAccessor level, BlockPos pos, BlockState state) {
+		super.destroy(level, pos, state);
+
+		if (level instanceof Level actualLevel && !actualLevel.isClientSide()) {
+			removeChairSeat(actualLevel, pos);
+		}
+	}
+
 	private VoxelShape getStaticShape(BlockState state) {
 		return switch (state.getValue(BlockStateProperties.HORIZONTAL_FACING)) {
 			case SOUTH -> SOUTH_SHAPE;
 			case WEST -> WEST_SHAPE;
 			case EAST -> EAST_SHAPE;
 			default -> NORTH_SHAPE;
+		};
+	}
+
+	private InteractionResult trySit(BlockState state, Level level, BlockPos pos, Player player) {
+		if (player.isShiftKeyDown() || player.isPassenger() || player.isSpectator()) {
+			return InteractionResult.PASS;
+		}
+
+		if (level.isClientSide()) {
+			return InteractionResult.SUCCESS;
+		}
+
+		AreaEffectCloud existingSeat = findChairSeat(level, pos);
+
+		if (existingSeat != null) {
+			if (existingSeat.getFirstPassenger() != null) {
+				return InteractionResult.PASS;
+			}
+
+			existingSeat.discard();
+		}
+
+		AreaEffectCloud seat = createChairSeat(level, pos, state);
+
+		if (!player.startRiding(seat)) {
+			seat.discard();
+			return InteractionResult.PASS;
+		}
+
+		return InteractionResult.SUCCESS_SERVER;
+	}
+
+	private AreaEffectCloud createChairSeat(Level level, BlockPos pos, BlockState state) {
+		BlockPos anchorPos = pos.immutable();
+		Block chairBlock = state.getBlock();
+		Vec3 seatPos = getSeatPosition(state, pos);
+		AreaEffectCloud seat = new AreaEffectCloud(level, seatPos.x(), seatPos.y(), seatPos.z()) {
+			@Override
+			public void tick() {
+				if (getFirstPassenger() == null || !level().getBlockState(anchorPos).is(chairBlock)) {
+					discard();
+					return;
+				}
+
+				super.tick();
+			}
+		};
+
+		seat.setNoGravity(true);
+		seat.setInvisible(true);
+		seat.setWaitTime(0);
+		seat.setRadius(0.0f);
+		seat.setDuration(Integer.MAX_VALUE);
+		level.addFreshEntity(seat);
+		return seat;
+	}
+
+	private AreaEffectCloud findChairSeat(Level level, BlockPos pos) {
+		return level.getEntitiesOfClass(AreaEffectCloud.class, new AABB(pos).inflate(0.5), cloud -> cloud.isInvisible() && cloud.isNoGravity() && cloud.getRadius() == 0.0f)
+			.stream()
+			.findFirst()
+			.orElse(null);
+	}
+
+	private void removeChairSeat(Level level, BlockPos pos) {
+		AreaEffectCloud seat = findChairSeat(level, pos);
+
+		if (seat != null) {
+			if (level instanceof ServerLevel serverLevel) {
+				seat.kill(serverLevel);
+				return;
+			}
+
+			seat.discard();
+		}
+	}
+
+	private Vec3 getSeatPosition(BlockState state, BlockPos pos) {
+		Vec3 center = Vec3.atBottomCenterOf(pos);
+
+		return switch (state.getValue(BlockStateProperties.HORIZONTAL_FACING)) {
+			case SOUTH -> center.add(0.0, 0.0, 0.1875);
+			case WEST -> center.add(-0.1875, 0.0, 0.0);
+			case EAST -> center.add(0.1875, 0.0, 0.0);
+			default -> center.add(0.0, 0.0, -0.1875);
 		};
 	}
 }
