@@ -15,6 +15,9 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.AreaEffectCloud;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -37,7 +40,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
@@ -107,6 +112,7 @@ public class LockerBlock extends BaseEntityBlock {
 		super.destroy(level, pos, state);
 
 		if (level instanceof Level actualLevel && !actualLevel.isClientSide()) {
+			removeLockerSeat(actualLevel, findControllerPos(actualLevel, pos, state.getValue(BlockStateProperties.HORIZONTAL_FACING)));
 			refreshStack(actualLevel, pos.below());
 			refreshStack(actualLevel, pos.above());
 		}
@@ -114,8 +120,11 @@ public class LockerBlock extends BaseEntityBlock {
 
 	@Override
 	public void wasExploded(ServerLevel level, BlockPos pos, Explosion explosion) {
+		BlockState state = level.getBlockState(pos);
+		BlockPos controllerPos = state.is(this) ? findControllerPos(level, pos, state.getValue(BlockStateProperties.HORIZONTAL_FACING)) : pos;
 		super.wasExploded(level, pos, explosion);
 
+		removeLockerSeat(level, controllerPos);
 		refreshStack(level, pos.below());
 		refreshStack(level, pos.above());
 	}
@@ -156,6 +165,14 @@ public class LockerBlock extends BaseEntityBlock {
 			refreshStack(level, pos);
 
 			if (level.getBlockEntity(pos) instanceof LockerBlockEntity blockEntity) {
+				if (player.isShiftKeyDown()) {
+					InteractionResult shoveResult = tryShovePlayerIn(state, level, pos, player, blockEntity);
+
+					if (shoveResult != InteractionResult.PASS) {
+						return shoveResult;
+					}
+				}
+
 				if (blockEntity.isStructureLocked() && !blockEntity.isStructureOpen()) {
 					player.sendOverlayMessage(Component.translatable("message.kurasu.locker_locked"));
 				} else {
@@ -302,6 +319,119 @@ public class LockerBlock extends BaseEntityBlock {
 
 		blockEntity.setStructureState(false, true, currentLockId, false);
 		player.sendOverlayMessage(Component.translatable("message.kurasu.locker_locked"));
+	}
+
+	private InteractionResult tryShovePlayerIn(BlockState state, Level level, BlockPos pos, Player player, LockerBlockEntity blockEntity) {
+		if (!blockEntity.isStructureOpen() || player.isPassenger() || player.isSpectator()) {
+			return InteractionResult.PASS;
+		}
+
+		BlockPos controllerPos = findControllerPos(level, pos, state.getValue(BlockStateProperties.HORIZONTAL_FACING));
+		BlockState controllerState = level.getBlockState(controllerPos);
+		Player target = findShoveTarget(level, controllerPos, player);
+
+		if (target == null) {
+			return InteractionResult.PASS;
+		}
+
+		AreaEffectCloud existingSeat = findLockerSeat(level, controllerPos);
+
+		if (existingSeat != null) {
+			if (existingSeat.getFirstPassenger() != null) {
+				return InteractionResult.PASS;
+			}
+
+			existingSeat.discard();
+		}
+
+		AreaEffectCloud seat = createLockerSeat(level, controllerPos, controllerState);
+
+		if (!target.startRiding(seat)) {
+			seat.discard();
+			return InteractionResult.PASS;
+		}
+
+		blockEntity.setStructureOpen(false);
+		return InteractionResult.SUCCESS_SERVER;
+	}
+
+	private Player findShoveTarget(Level level, BlockPos pos, Player player) {
+		Player bestTarget = null;
+		double bestDistance = Double.MAX_VALUE;
+		Vec3 center = Vec3.atCenterOf(pos);
+
+		for (Player candidate : level.getEntitiesOfClass(Player.class, new AABB(pos).inflate(1.0, 0.5, 1.0))) {
+			if (candidate == player || candidate.isSpectator() || candidate.isPassenger()) {
+				continue;
+			}
+
+			double distance = candidate.distanceToSqr(center);
+
+			if (distance < bestDistance) {
+				bestTarget = candidate;
+				bestDistance = distance;
+			}
+		}
+
+		return bestTarget;
+	}
+
+	private AreaEffectCloud createLockerSeat(Level level, BlockPos pos, BlockState state) {
+		BlockPos anchorPos = pos.immutable();
+		Block lockerBlock = state.getBlock();
+		Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
+		Vec3 seatPos = Vec3.atBottomCenterOf(pos).add(facing.getStepX() * 0.3125, 0.0, facing.getStepZ() * 0.3125);
+		AreaEffectCloud seat = new AreaEffectCloud(level, seatPos.x(), seatPos.y(), seatPos.z()) {
+			@Override
+			public void tick() {
+				if (getFirstPassenger() == null || !level().getBlockState(anchorPos).is(lockerBlock)) {
+					discard();
+					return;
+				}
+
+				if (level().getBlockEntity(anchorPos) instanceof LockerBlockEntity blockEntity && blockEntity.isStructureOpen()) {
+					discard();
+					return;
+				}
+
+				super.tick();
+			}
+
+			@Override
+			protected Vec3 getPassengerAttachmentPoint(Entity passenger, EntityDimensions dimensions, float partialTick) {
+				return new Vec3(0.0, 0.0, 0.0);
+			}
+		};
+
+		seat.setNoGravity(true);
+		seat.setInvisible(true);
+		seat.setWaitTime(0);
+		seat.setRadius(0.0f);
+		seat.setDuration(Integer.MAX_VALUE);
+		level.addFreshEntity(seat);
+		return seat;
+	}
+
+	private AreaEffectCloud findLockerSeat(Level level, BlockPos pos) {
+		return level.getEntitiesOfClass(AreaEffectCloud.class, new AABB(pos).inflate(0.5), cloud -> cloud.isInvisible() && cloud.isNoGravity() && cloud.getRadius() == 0.0f)
+			.stream()
+			.findFirst()
+			.orElse(null);
+	}
+
+	private void removeLockerSeat(Level level, BlockPos pos) {
+		AreaEffectCloud seat = findLockerSeat(level, pos);
+
+		if (seat == null) {
+			return;
+		}
+
+		if (level instanceof ServerLevel serverLevel) {
+			seat.kill(serverLevel);
+			return;
+		}
+
+		seat.discard();
 	}
 
 	private Part getPart(int index, int height) {
