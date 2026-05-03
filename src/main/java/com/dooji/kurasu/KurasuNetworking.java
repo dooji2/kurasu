@@ -130,7 +130,7 @@ public class KurasuNetworking {
 		}
 
 		if (player.level().getBlockEntity(payload.blockPos()) instanceof BlackboardBlockEntity blackboard) {
-			blackboard.setDrawData(new DrawData(BlackboardBlockEntity.DRAW_WIDTH, BlackboardBlockEntity.DRAW_HEIGHT, payload.pixels()));
+			blackboard.setDrawData(new DrawData(payload.width(), payload.height(), payload.pixels()));
 		}
 	}
 

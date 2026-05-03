@@ -1,7 +1,6 @@
 package com.dooji.kurasu.network;
 
 import com.dooji.kurasu.Kurasu;
-import com.dooji.kurasu.block.entity.BlackboardBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -14,17 +13,8 @@ public record DrawBlackboardPixelPayload(BlockPos blockPos, int x, int y) implem
 	public static final StreamCodec<RegistryFriendlyByteBuf, DrawBlackboardPixelPayload> CODEC = CustomPacketPayload.codec(DrawBlackboardPixelPayload::write, DrawBlackboardPixelPayload::read);
 
 	public DrawBlackboardPixelPayload {
-		if (x < 0) {
-			x = 0;
-		} else if (x >= BlackboardBlockEntity.DRAW_WIDTH) {
-			x = BlackboardBlockEntity.DRAW_WIDTH - 1;
-		}
-
-		if (y < 0) {
-			y = 0;
-		} else if (y >= BlackboardBlockEntity.DRAW_HEIGHT) {
-			y = BlackboardBlockEntity.DRAW_HEIGHT - 1;
-		}
+		x = Math.max(0, x);
+		y = Math.max(0, y);
 	}
 
 	@Override

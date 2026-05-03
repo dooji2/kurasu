@@ -6,6 +6,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.world.item.ItemStack;
 
 public class StickyNoteScreen extends DrawScreen {
+	private static final int BASE_SIZE = DrawData.DEFAULT_SIZE;
 	private final ItemStack stack;
 
 	public StickyNoteScreen(ItemStack stack) {
@@ -13,7 +14,7 @@ public class StickyNoteScreen extends DrawScreen {
 	}
 
 	private StickyNoteScreen(ItemStack stack, DrawData data) {
-		super(Mode.STICKY_NOTE, data.width(), data.height(), data.pixels());
+		super(Mode.STICKY_NOTE, BASE_SIZE, BASE_SIZE, data);
 		this.stack = stack;
 	}
 

@@ -23,13 +23,11 @@ public class BlackboardBlockEntity extends AccessoryBlockEntity {
 	}
 
 	public void setDrawData(DrawData drawData) {
-		DrawData normalizedDrawData = drawData.normalized(DRAW_WIDTH, DRAW_HEIGHT);
-
-		if (this.drawData.samePixels(normalizedDrawData)) {
+		if (this.drawData.samePixels(drawData)) {
 			return;
 		}
 
-		this.drawData = normalizedDrawData;
+		this.drawData = drawData;
 		this.setChanged();
 
 		if (this.level != null) {
@@ -44,7 +42,7 @@ public class BlackboardBlockEntity extends AccessoryBlockEntity {
 	@Override
 	protected void loadAdditional(ValueInput input) {
 		super.loadAdditional(input);
-		this.drawData = DrawData.read(input.child("board_draw").orElseThrow()).normalized(DRAW_WIDTH, DRAW_HEIGHT);
+		this.drawData = DrawData.read(input.child("board_draw").orElseThrow());
 	}
 
 	@Override

@@ -15,7 +15,7 @@ public class BlackboardScreen extends DrawScreen {
 	private final BlockPos blockPos;
 
 	private BlackboardScreen(BlockPos blockPos, DrawData data) {
-		super(Mode.BLACKBOARD, BlackboardBlockEntity.DRAW_WIDTH, BlackboardBlockEntity.DRAW_HEIGHT, data.pixels());
+		super(Mode.BLACKBOARD, BlackboardBlockEntity.DRAW_WIDTH, BlackboardBlockEntity.DRAW_HEIGHT, data);
 		this.blockPos = blockPos;
 	}
 
@@ -51,6 +51,6 @@ public class BlackboardScreen extends DrawScreen {
 
 	@Override
 	protected void save(int width, int height, int[] pixels) {
-		ClientPlayNetworking.send(new SaveBlackboardPayload(this.blockPos, pixels));
+		ClientPlayNetworking.send(new SaveBlackboardPayload(this.blockPos, width, height, pixels));
 	}
 }

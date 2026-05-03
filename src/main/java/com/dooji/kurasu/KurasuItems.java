@@ -19,17 +19,20 @@ public class KurasuItems {
 	private static final Identifier KEY_ID = Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "key");
 	private static final Identifier LOCKPICK_ID = Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "lockpick");
 	private static final Identifier CHALK_ID = Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "chalk");
+	private static final Identifier ERASER_ID = Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "eraser");
 	private static final ResourceKey<Item> STICKY_NOTE_ITEM_KEY = ResourceKey.create(Registries.ITEM, STICKY_NOTE_ID);
 	private static final ResourceKey<Item> BOOK_1_ITEM_KEY = ResourceKey.create(Registries.ITEM, BOOK_1_ID);
 	private static final ResourceKey<Item> KEY_ITEM_KEY = ResourceKey.create(Registries.ITEM, KEY_ID);
 	private static final ResourceKey<Item> LOCKPICK_ITEM_KEY = ResourceKey.create(Registries.ITEM, LOCKPICK_ID);
 	private static final ResourceKey<Item> CHALK_ITEM_KEY = ResourceKey.create(Registries.ITEM, CHALK_ID);
+	private static final ResourceKey<Item> ERASER_ITEM_KEY = ResourceKey.create(Registries.ITEM, ERASER_ID);
 
 	public static final Item STICKY_NOTE = registerItem(STICKY_NOTE_ID, new Item(new Item.Properties().setId(STICKY_NOTE_ITEM_KEY).useItemDescriptionPrefix()));
 	public static final Item BOOK_1 = registerItem(BOOK_1_ID, new WritableBookItem(new Item.Properties().setId(BOOK_1_ITEM_KEY).useItemDescriptionPrefix().stacksTo(1).component(DataComponents.WRITABLE_BOOK_CONTENT, WritableBookContent.EMPTY)));
 	public static final Item KEY = registerItem(KEY_ID, new KeyItem(new Item.Properties().setId(KEY_ITEM_KEY).useItemDescriptionPrefix().stacksTo(1)));
 	public static final Item LOCKPICK = registerItem(LOCKPICK_ID, new Item(new Item.Properties().setId(LOCKPICK_ITEM_KEY).useItemDescriptionPrefix().stacksTo(1).durability(24)));
 	public static final Item CHALK = registerItem(CHALK_ID, new ChalkItem(new Item.Properties().setId(CHALK_ITEM_KEY).useItemDescriptionPrefix().stacksTo(1), 0xFFFFFFFF));
+	public static final Item ERASER = registerItem(ERASER_ID, new ChalkItem(new Item.Properties().setId(ERASER_ITEM_KEY).useItemDescriptionPrefix().stacksTo(1), 0));
 
 	public static void init() {
 	}

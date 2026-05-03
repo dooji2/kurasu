@@ -36,6 +36,7 @@ class KurasuCreativeTabs {
 					output.accept(KurasuItems.KEY);
 					output.accept(KurasuItems.LOCKPICK);
 					output.accept(KurasuItems.CHALK);
+					output.accept(KurasuItems.ERASER);
 					output.accept(KurasuItems.STICKY_NOTE);
 					output.accept(KurasuItems.BOOK_1);
 				})

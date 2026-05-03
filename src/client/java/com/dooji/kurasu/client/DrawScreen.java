@@ -1,6 +1,7 @@
 package com.dooji.kurasu.client;
 
 import com.dooji.kurasu.Kurasu;
+import com.dooji.kurasu.item.DrawData;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.NativeImage;
 import java.util.Arrays;
@@ -14,6 +15,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
+import net.minecraft.world.item.DyeColor;
 import org.lwjgl.glfw.GLFW;
 
 public abstract class DrawScreen extends Screen {
@@ -24,25 +26,49 @@ public abstract class DrawScreen extends Screen {
 	private static final Identifier DOWN_ICON = Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "textures/gui/icons/down.png");
 	private static final int HINT_TEXT = 0xFFF2F2F2;
 	private static final int MAX_ZOOM = 24;
-	private static final int[] BLACKBOARD_COLORS = {0xFFFFFFFF};
-	private static final int[] STICKY_NOTE_COLORS = {
-		0xFFFFFFFF,
-		0xFF1F1F1F,
+	private static final int[] RESOLUTION_SCALES = {1, 2, 4, 8};
+	private static final int[] DYE_COLORS = Arrays.stream(DyeColor.values()).mapToInt(dyeColor -> 0xFF000000 | dyeColor.getTextureDiffuseColor()).toArray();
+	private static final int[] BLACKBOARD_COLORS = appendColors(DYE_COLORS, new int[] {
+		0xFFF8D96B,
+		0xFFFFB347,
+		0xFFFF7A7A,
+		0xFFFF99C8,
+		0xFFC6F08C,
+		0xFF7EE787,
+		0xFF7FE7E7,
+		0xFF89CFF0,
+		0xFF7AA2FF,
+		0xFFC099FF,
+		0xFFA97142
+	});
+	private static final int[] STICKY_NOTE_COLORS = appendColors(DYE_COLORS, new int[] {
 		0xFFF6C7D6,
+		0xFFFFA7C4,
+		0xFFFFB38A,
 		0xFFF9E0A8,
+		0xFFFFF27A,
 		0xFFC9E8C8,
-		0xFFC7DDF6
-	};
+		0xFF9FE3B1,
+		0xFFC7F0E9,
+		0xFFC7DDF6,
+		0xFFAFCBFF,
+		0xFFD6C6F6,
+		0xFFB39DDB,
+		0xFFC49A6C
+	});
 
-	private final int canvasWidth;
-	private final int canvasHeight;
+	private final int baseCanvasWidth;
+	private final int baseCanvasHeight;
 	private final int[] colors;
-	private final int[] pixels;
-	private final NativeImage canvasImage;
-	private final DynamicTexture canvasTexture;
 	private final Identifier canvasTextureId;
+	private int canvasWidth;
+	private int canvasHeight;
+	private int[] pixels;
+	private NativeImage canvasImage;
+	private DynamicTexture canvasTexture;
 	private int color;
 	private boolean eraseMode;
+	private boolean pickerMode;
 	private boolean painting;
 	private boolean panning;
 	private boolean dirty;
@@ -53,33 +79,24 @@ public abstract class DrawScreen extends Screen {
 	private int toolScroll;
 	private int brushSize = 1;
 	private int zoom = 1;
+	private int resolutionScaleIndex;
 	private double viewX;
 	private double viewY;
 	private int lastPaintX = -1;
 	private int lastPaintY = -1;
 
-	protected DrawScreen(Mode mode, int canvasWidth, int canvasHeight, int[] pixels) {
+	protected DrawScreen(Mode mode, int baseCanvasWidth, int baseCanvasHeight, DrawData data) {
 		super(Component.empty());
-		this.canvasWidth = canvasWidth;
-		this.canvasHeight = canvasHeight;
+		this.baseCanvasWidth = Math.max(1, baseCanvasWidth);
+		this.baseCanvasHeight = Math.max(1, baseCanvasHeight);
 		this.colors = switch (mode) {
 			case BLACKBOARD -> BLACKBOARD_COLORS.clone();
 			case STICKY_NOTE -> STICKY_NOTE_COLORS.clone();
 		};
-		this.pixels = Arrays.copyOf(pixels, canvasWidth * canvasHeight);
-		this.color = this.colors[Math.min(2, this.colors.length - 1)];
 		this.canvasTextureId = Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "screen/draw/" + Integer.toHexString(System.identityHashCode(this)));
-		this.canvasImage = new NativeImage(canvasWidth, canvasHeight, true);
-		this.canvasTexture = new DynamicTexture(this.canvasTextureId::toString, this.canvasImage);
-
-		for (int y = 0; y < this.canvasHeight; y++) {
-			for (int x = 0; x < this.canvasWidth; x++) {
-				this.canvasImage.setPixel(x, y, this.displayPixel(x, y));
-			}
-		}
-
-		this.dirty = true;
-		Minecraft.getInstance().getTextureManager().register(this.canvasTextureId, this.canvasTexture);
+		this.color = this.colors[Math.min(2, this.colors.length - 1)];
+		this.setCanvas(data.width(), data.height(), data.pixels(), false);
+		this.resolutionScaleIndex = this.findResolutionScaleIndex(this.canvasWidth, this.canvasHeight);
 	}
 
 	@Override
@@ -127,14 +144,22 @@ public abstract class DrawScreen extends Screen {
 			if (this.isInside(event.x(), event.y(), x, listTop, 10, bottom - listTop)) {
 				int index = this.toolScroll + (int) ((event.y() - listTop) / 10);
 
-				if (index < this.colors.length + 2) {
+				if (index < this.toolEntryCount()) {
 					if (index == 0) {
 						this.eraseMode = false;
+						this.pickerMode = false;
 					} else if (index == 1) {
 						this.eraseMode = true;
-					} else {
-						this.color = this.colors[index - 2];
+						this.pickerMode = false;
+					} else if (index == 2) {
 						this.eraseMode = false;
+						this.pickerMode = true;
+					} else if (index == 3) {
+						this.cycleResolutionScale();
+					} else {
+						this.color = this.colors[index - 4];
+						this.eraseMode = false;
+						this.pickerMode = false;
 					}
 
 					return true;
@@ -142,18 +167,23 @@ public abstract class DrawScreen extends Screen {
 			}
 
 			if (this.isInside(event.x(), event.y(), this.canvasDrawLeft(), this.canvasDrawTop(), this.canvasDrawWidth(), this.canvasDrawHeight())) {
+				if (this.pickerMode) {
+					this.pickColorAt(event.x(), event.y());
+					return true;
+				}
+
 				this.painting = true;
 				this.lastPaintX = -1;
 				this.lastPaintY = -1;
 				this.paintAt(event.x(), event.y());
 				return true;
 			}
-			}
+		}
 
-			if (event.button() == 1 && this.isInside(event.x(), event.y(), this.canvasDrawLeft(), this.canvasDrawTop(), this.canvasDrawWidth(), this.canvasDrawHeight())) {
-				this.panning = true;
-				return true;
-			}
+		if (event.button() == 1 && this.isInside(event.x(), event.y(), this.canvasDrawLeft(), this.canvasDrawTop(), this.canvasDrawWidth(), this.canvasDrawHeight())) {
+			this.panning = true;
+			return true;
+		}
 
 		return super.mouseClicked(event, doubleClick);
 	}
@@ -245,11 +275,10 @@ public abstract class DrawScreen extends Screen {
 
 		boolean hadPreview = this.previewVisible;
 		boolean previewVisible = false;
-		if (this.isInside(mouseX, mouseY, this.canvasDrawLeft(), this.canvasDrawTop(), this.canvasDrawWidth(), this.canvasDrawHeight())) {
+		if (this.isInside(mouseX, mouseY, this.canvasDrawLeft(), this.canvasDrawTop(), this.canvasDrawWidth(), this.canvasDrawHeight()) && !this.pickerMode) {
 			int centerX = this.mouseToCanvasX(mouseX) - this.brushSize / 2;
 			int centerY = this.mouseToCanvasY(mouseY) - this.brushSize / 2;
 
-			// idk how to make the preview pixel perfect so imma do this for now
 			for (int y = 0; y < this.brushSize; y++) {
 				for (int x = 0; x < this.brushSize; x++) {
 					int pixelX = centerX + x;
@@ -314,20 +343,13 @@ public abstract class DrawScreen extends Screen {
 
 		int first = this.toolScroll;
 		int visible = 15;
-		int last = Math.min(this.colors.length + 2, first + visible);
+		int last = Math.min(this.toolEntryCount(), first + visible);
 		int listTop = top + 7;
 
 		for (int i = first; i < last; i++) {
 			int y = listTop + (i - first) * 10;
 			boolean hovered = this.isInside(mouseX, mouseY, x, y, 10, 10);
-			boolean selected;
-			if (i == 0) {
-				selected = !this.eraseMode;
-			} else if (i == 1) {
-				selected = this.eraseMode;
-			} else {
-				selected = !this.eraseMode && this.color == this.colors[i - 2];
-			}
+			boolean selected = this.isToolSelected(i);
 
 			gfx.blit(RenderPipelines.GUI_TEXTURED, DRAW_SCREEN_TEXTURE, x, y, 250, (hovered || selected) ? 17 : 0, 10, 10, 10, 10, 260, 180);
 
@@ -335,8 +357,16 @@ public abstract class DrawScreen extends Screen {
 				this.drawIcon(gfx, BRUSH_ICON, x, y, 10, 8, 8);
 			} else if (i == 1) {
 				this.drawIcon(gfx, ERASER_ICON, x, y, 10, 8, 8);
+			} else if (i == 2) {
+				gfx.centeredText(this.font, Component.literal("P"), x + 5, y + 1, 0xFFFFFFFF);
+			} else if (i == 3) {
+				gfx.centeredText(this.font, Integer.toString(RESOLUTION_SCALES[this.resolutionScaleIndex]), x + 5, y + 1, 0xFFFFFFFF);
 			} else {
-				gfx.fill(x + 2, y + 2, x + 8, y + 8, this.colors[i - 2]);
+				gfx.fill(x + 2, y + 2, x + 8, y + 8, this.colors[i - 4]);
+			}
+
+			if (hovered) {
+				this.addToolTooltip(gfx, i, mouseX, mouseY);
 			}
 		}
 	}
@@ -356,6 +386,9 @@ public abstract class DrawScreen extends Screen {
 	@Override
 	public void removed() {
 		Minecraft.getInstance().getTextureManager().release(this.canvasTextureId);
+		if (this.canvasTexture != null) {
+			this.canvasTexture.close();
+		}
 		super.removed();
 	}
 
@@ -381,8 +414,50 @@ public abstract class DrawScreen extends Screen {
 		gfx.blit(RenderPipelines.GUI_TEXTURED, texture, drawX, drawY, 0, 0, width, height, width, height, width, height);
 	}
 
+	private void addToolTooltip(GuiGraphicsExtractor gfx, int index, int mouseX, int mouseY) {
+		Component tooltip = null;
+
+		if (index == 0) {
+			tooltip = Component.translatable("gui.kurasu.draw_tool_brush");
+		} else if (index == 1) {
+			tooltip = Component.translatable("gui.kurasu.draw_tool_eraser");
+		} else if (index == 2) {
+			tooltip = Component.translatable("gui.kurasu.draw_tool_picker");
+		} else if (index == 3) {
+			tooltip = Component.translatable("gui.kurasu.draw_tool_scale", RESOLUTION_SCALES[this.resolutionScaleIndex]);
+		}
+
+		if (tooltip != null) {
+			gfx.setTooltipForNextFrame(this.font, tooltip, mouseX, mouseY);
+		}
+	}
+
+	private int toolEntryCount() {
+		return this.colors.length + 4;
+	}
+
+	private boolean isToolSelected(int index) {
+		if (index == 0) {
+			return !this.eraseMode && !this.pickerMode;
+		}
+
+		if (index == 1) {
+			return this.eraseMode;
+		}
+
+		if (index == 2) {
+			return this.pickerMode;
+		}
+
+		if (index == 3) {
+			return false;
+		}
+
+		return !this.eraseMode && !this.pickerMode && this.color == this.colors[index - 4];
+	}
+
 	private int clampToolScroll(int value) {
-		return Mth.clamp(value, 0, Math.max(0, this.colors.length + 2 - 15));
+		return Mth.clamp(value, 0, Math.max(0, this.toolEntryCount() - 15));
 	}
 
 	private boolean isInside(double mouseX, double mouseY, int x, int y, int width, int height) {
@@ -440,6 +515,78 @@ public abstract class DrawScreen extends Screen {
 		this.canvasImage.setPixel(x, y, this.displayPixel(x, y));
 		this.dirty = true;
 		this.modified = true;
+	}
+
+	private void pickColorAt(double mouseX, double mouseY) {
+		int pixel = this.pixels[this.mouseToCanvasX(mouseX) + this.mouseToCanvasY(mouseY) * this.canvasWidth];
+		this.pickerMode = false;
+
+		if (ARGB.alpha(pixel) == 0) {
+			this.eraseMode = true;
+			return;
+		}
+
+		this.color = pixel;
+		this.eraseMode = false;
+	}
+
+	private void cycleResolutionScale() {
+		this.resolutionScaleIndex = (this.resolutionScaleIndex + 1) % RESOLUTION_SCALES.length;
+		int newWidth = this.baseCanvasWidth * RESOLUTION_SCALES[this.resolutionScaleIndex];
+		int newHeight = this.baseCanvasHeight * RESOLUTION_SCALES[this.resolutionScaleIndex];
+		int[] resizedPixels = new int[newWidth * newHeight];
+		int copyWidth = Math.min(this.canvasWidth, newWidth);
+		int copyHeight = Math.min(this.canvasHeight, newHeight);
+
+		for (int y = 0; y < copyHeight; y++) {
+			System.arraycopy(this.pixels, y * this.canvasWidth, resizedPixels, y * newWidth, copyWidth);
+		}
+
+		this.setCanvas(newWidth, newHeight, resizedPixels, true);
+		this.zoom = Math.min(MAX_ZOOM, Math.max(218 / this.canvasWidth, 164 / this.canvasHeight) + 1);
+		this.viewX = 0.0;
+		this.viewY = 0.0;
+		this.clampView();
+	}
+
+	private void setCanvas(int width, int height, int[] newPixels, boolean markModified) {
+		if (this.canvasTexture != null) {
+			Minecraft.getInstance().getTextureManager().release(this.canvasTextureId);
+			this.canvasTexture.close();
+		}
+
+		this.canvasWidth = Math.max(1, width);
+		this.canvasHeight = Math.max(1, height);
+		this.pixels = Arrays.copyOf(newPixels, this.canvasWidth * this.canvasHeight);
+		this.canvasImage = new NativeImage(this.canvasWidth, this.canvasHeight, true);
+
+		for (int y = 0; y < this.canvasHeight; y++) {
+			for (int x = 0; x < this.canvasWidth; x++) {
+				this.canvasImage.setPixel(x, y, this.displayPixel(x, y));
+			}
+		}
+
+		this.canvasTexture = new DynamicTexture(this.canvasTextureId::toString, this.canvasImage);
+		Minecraft.getInstance().getTextureManager().register(this.canvasTextureId, this.canvasTexture);
+		this.previewVisible = false;
+		this.dirty = true;
+		this.modified |= markModified;
+	}
+
+	private int findResolutionScaleIndex(int width, int height) {
+		for (int i = 0; i < RESOLUTION_SCALES.length; i++) {
+			if (this.baseCanvasWidth * RESOLUTION_SCALES[i] == width && this.baseCanvasHeight * RESOLUTION_SCALES[i] == height) {
+				return i;
+			}
+		}
+
+		return 0;
+	}
+
+	private static int[] appendColors(int[] baseColors, int[] extraColors) {
+		int[] colors = Arrays.copyOf(baseColors, baseColors.length + extraColors.length);
+		System.arraycopy(extraColors, 0, colors, baseColors.length, extraColors.length);
+		return colors;
 	}
 
 	private int displayPixel(int x, int y) {

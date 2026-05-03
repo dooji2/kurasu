@@ -57,8 +57,15 @@ public class DrawTextures {
 		int height = data.height();
 		NativeImage image = new NativeImage(width, height, true);
 
-		if (baseImage != null && baseImage.getWidth() == width && baseImage.getHeight() == height) {
-			image.copyFrom(baseImage);
+		if (baseImage != null) {
+			for (int y = 0; y < height; y++) {
+				int sourceY = y * baseImage.getHeight() / height;
+
+				for (int x = 0; x < width; x++) {
+					int sourceX = x * baseImage.getWidth() / width;
+					image.setPixel(x, y, baseImage.getPixel(sourceX, sourceY));
+				}
+			}
 		}
 
 		int[] pixels = data.pixels();

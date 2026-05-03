@@ -143,7 +143,7 @@ public class ObjModels {
 		};
 	}
 
-	public static int[] blackboardPixel(Vector3f localPosition) {
+	public static int[] blackboardPixel(Vector3f localPosition, int width, int height) {
 		if (blackboardMesh == null || blackboardMesh.blackboardFaces.isEmpty()) {
 			return null;
 		}
@@ -170,8 +170,8 @@ public class ObjModels {
 		float vLerp = offset.dot(bitangent) / bitangentLengthSquared;
 		float u = Mth.lerp(Mth.clamp(uLerp, 0.0f, 1.0f), origin.u, tangentVertex.u);
 		float v = Mth.lerp(Mth.clamp(vLerp, 0.0f, 1.0f), origin.v, bitangentVertex.v);
-		int x = Mth.clamp((int) (u * 60.0f), 0, 59);
-		int y = Mth.clamp((int) (v * 28.0f), 0, 27);
+		int x = Mth.clamp((int) (u * width), 0, width - 1);
+		int y = Mth.clamp((int) (v * height), 0, height - 1);
 		return new int[] {x, y};
 	}
 

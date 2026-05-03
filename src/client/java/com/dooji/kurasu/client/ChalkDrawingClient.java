@@ -1,6 +1,7 @@
 package com.dooji.kurasu.client;
 
 import com.dooji.kurasu.KurasuItems;
+import com.dooji.kurasu.block.entity.BlackboardBlockEntity;
 import com.dooji.kurasu.client.render.LockerRaycast;
 import com.dooji.kurasu.client.render.ObjModels;
 import com.dooji.kurasu.network.DrawBlackboardPixelPayload;
@@ -60,7 +61,14 @@ public final class ChalkDrawingClient {
 			return false;
 		}
 
-		int[] pixel = ObjModels.blackboardPixel(hit.localPosition());
+		int width = BlackboardBlockEntity.DRAW_WIDTH;
+		int height = BlackboardBlockEntity.DRAW_HEIGHT;
+		if (minecraft.level.getBlockEntity(hit.blockPos()) instanceof BlackboardBlockEntity blackboard) {
+			width = blackboard.getDrawData().width();
+			height = blackboard.getDrawData().height();
+		}
+
+		int[] pixel = ObjModels.blackboardPixel(hit.localPosition(), width, height);
 		if (pixel == null) {
 			lastBlockPos = null;
 			lastPixelX = -1;
