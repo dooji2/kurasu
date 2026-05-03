@@ -4,7 +4,9 @@ import com.dooji.kurasu.Kurasu;
 import com.dooji.kurasu.item.DrawData;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.NativeImage;
+import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Deque;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -20,11 +22,14 @@ import org.lwjgl.glfw.GLFW;
 
 public abstract class DrawScreen extends Screen {
 	private static final Identifier DRAW_SCREEN_TEXTURE = Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "textures/gui/sticky_note.png");
+	private static final Identifier UNDO_ICON = Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "textures/gui/icons/undo.png");
+	private static final Identifier REDO_ICON = Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "textures/gui/icons/redo.png");
 	private static final Identifier BRUSH_ICON = Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "textures/gui/icons/brush.png");
 	private static final Identifier ERASER_ICON = Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "textures/gui/icons/eraser.png");
 	private static final Identifier UP_ICON = Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "textures/gui/icons/up.png");
 	private static final Identifier DOWN_ICON = Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "textures/gui/icons/down.png");
 	private static final int HINT_TEXT = 0xFFF2F2F2;
+	private static final int HISTORY_LIMIT = 32;
 	private static final int MAX_ZOOM = 24;
 	private static final int[] RESOLUTION_SCALES = {1, 2, 4, 8};
 	private static final int[] DYE_COLORS = Arrays.stream(DyeColor.values()).mapToInt(dyeColor -> 0xFF000000 | dyeColor.getTextureDiffuseColor()).toArray();
@@ -84,6 +89,10 @@ public abstract class DrawScreen extends Screen {
 	private double viewY;
 	private int lastPaintX = -1;
 	private int lastPaintY = -1;
+	private final Deque<CanvasState> undoStack = new ArrayDeque<>();
+	private final Deque<CanvasState> redoStack = new ArrayDeque<>();
+	private CanvasState pendingUndoState;
+	private boolean strokeChanged;
 
 	protected DrawScreen(Mode mode, int baseCanvasWidth, int baseCanvasHeight, DrawData data) {
 		super(Component.empty());
@@ -146,18 +155,22 @@ public abstract class DrawScreen extends Screen {
 
 				if (index < this.toolEntryCount()) {
 					if (index == 0) {
-						this.eraseMode = false;
-						this.pickerMode = false;
+						this.undo();
 					} else if (index == 1) {
-						this.eraseMode = true;
-						this.pickerMode = false;
+						this.redo();
 					} else if (index == 2) {
 						this.eraseMode = false;
-						this.pickerMode = true;
+						this.pickerMode = false;
 					} else if (index == 3) {
+						this.eraseMode = true;
+						this.pickerMode = false;
+					} else if (index == 4) {
+						this.eraseMode = false;
+						this.pickerMode = true;
+					} else if (index == 5) {
 						this.cycleResolutionScale();
 					} else {
-						this.color = this.colors[index - 4];
+						this.color = this.colors[index - 6];
 						this.eraseMode = false;
 						this.pickerMode = false;
 					}
@@ -173,6 +186,8 @@ public abstract class DrawScreen extends Screen {
 				}
 
 				this.painting = true;
+				this.pendingUndoState = this.captureState();
+				this.strokeChanged = false;
 				this.lastPaintX = -1;
 				this.lastPaintY = -1;
 				this.paintAt(event.x(), event.y());
@@ -209,6 +224,7 @@ public abstract class DrawScreen extends Screen {
 	public boolean mouseReleased(MouseButtonEvent event) {
 		if (event.button() == 0 && this.painting) {
 			this.painting = false;
+			this.finishStroke();
 			this.lastPaintX = -1;
 			this.lastPaintY = -1;
 			return true;
@@ -354,15 +370,23 @@ public abstract class DrawScreen extends Screen {
 			gfx.blit(RenderPipelines.GUI_TEXTURED, DRAW_SCREEN_TEXTURE, x, y, 250, (hovered || selected) ? 17 : 0, 10, 10, 10, 10, 260, 180);
 
 			if (i == 0) {
-				this.drawIcon(gfx, BRUSH_ICON, x, y, 10, 8, 8);
+				this.drawIcon(gfx, UNDO_ICON, x, y, 10, 8, 8);
 			} else if (i == 1) {
-				this.drawIcon(gfx, ERASER_ICON, x, y, 10, 8, 8);
+				this.drawIcon(gfx, REDO_ICON, x, y, 10, 8, 8);
 			} else if (i == 2) {
-				gfx.centeredText(this.font, Component.literal("P"), x + 5, y + 1, 0xFFFFFFFF);
+				this.drawIcon(gfx, BRUSH_ICON, x, y, 10, 8, 8);
 			} else if (i == 3) {
+				this.drawIcon(gfx, ERASER_ICON, x, y, 10, 8, 8);
+			} else if (i == 4) {
+				gfx.centeredText(this.font, Component.literal("P"), x + 5, y + 1, 0xFFFFFFFF);
+			} else if (i == 5) {
 				gfx.centeredText(this.font, Integer.toString(RESOLUTION_SCALES[this.resolutionScaleIndex]), x + 5, y + 1, 0xFFFFFFFF);
 			} else {
-				gfx.fill(x + 2, y + 2, x + 8, y + 8, this.colors[i - 4]);
+				gfx.fill(x + 2, y + 2, x + 8, y + 8, this.colors[i - 6]);
+			}
+
+			if ((i == 0 && !this.canUndo()) || (i == 1 && !this.canRedo())) {
+				gfx.fill(x + 1, y + 1, x + 9, y + 9, 0xA0000000);
 			}
 
 			if (hovered) {
@@ -418,12 +442,16 @@ public abstract class DrawScreen extends Screen {
 		Component tooltip = null;
 
 		if (index == 0) {
-			tooltip = Component.translatable("gui.kurasu.draw_tool_brush");
+			tooltip = Component.translatable("gui.kurasu.draw_tool_undo");
 		} else if (index == 1) {
-			tooltip = Component.translatable("gui.kurasu.draw_tool_eraser");
+			tooltip = Component.translatable("gui.kurasu.draw_tool_redo");
 		} else if (index == 2) {
-			tooltip = Component.translatable("gui.kurasu.draw_tool_picker");
+			tooltip = Component.translatable("gui.kurasu.draw_tool_brush");
 		} else if (index == 3) {
+			tooltip = Component.translatable("gui.kurasu.draw_tool_eraser");
+		} else if (index == 4) {
+			tooltip = Component.translatable("gui.kurasu.draw_tool_picker");
+		} else if (index == 5) {
 			tooltip = Component.translatable("gui.kurasu.draw_tool_scale", RESOLUTION_SCALES[this.resolutionScaleIndex]);
 		}
 
@@ -433,27 +461,27 @@ public abstract class DrawScreen extends Screen {
 	}
 
 	private int toolEntryCount() {
-		return this.colors.length + 4;
+		return this.colors.length + 6;
 	}
 
 	private boolean isToolSelected(int index) {
-		if (index == 0) {
+		if (index == 2) {
 			return !this.eraseMode && !this.pickerMode;
 		}
 
-		if (index == 1) {
+		if (index == 3) {
 			return this.eraseMode;
 		}
 
-		if (index == 2) {
+		if (index == 4) {
 			return this.pickerMode;
 		}
 
-		if (index == 3) {
+		if (index < 6) {
 			return false;
 		}
 
-		return !this.eraseMode && !this.pickerMode && this.color == this.colors[index - 4];
+		return !this.eraseMode && !this.pickerMode && this.color == this.colors[index - 6];
 	}
 
 	private int clampToolScroll(int value) {
@@ -515,6 +543,7 @@ public abstract class DrawScreen extends Screen {
 		this.canvasImage.setPixel(x, y, this.displayPixel(x, y));
 		this.dirty = true;
 		this.modified = true;
+		this.strokeChanged = true;
 	}
 
 	private void pickColorAt(double mouseX, double mouseY) {
@@ -531,6 +560,7 @@ public abstract class DrawScreen extends Screen {
 	}
 
 	private void cycleResolutionScale() {
+		CanvasState before = this.captureState();
 		this.resolutionScaleIndex = (this.resolutionScaleIndex + 1) % RESOLUTION_SCALES.length;
 		int newWidth = this.baseCanvasWidth * RESOLUTION_SCALES[this.resolutionScaleIndex];
 		int newHeight = this.baseCanvasHeight * RESOLUTION_SCALES[this.resolutionScaleIndex];
@@ -547,6 +577,8 @@ public abstract class DrawScreen extends Screen {
 		this.viewX = 0.0;
 		this.viewY = 0.0;
 		this.clampView();
+		this.pushUndo(before);
+		this.redoStack.clear();
 	}
 
 	private void setCanvas(int width, int height, int[] newPixels, boolean markModified) {
@@ -653,8 +685,74 @@ public abstract class DrawScreen extends Screen {
 		return Mth.clamp(Mth.floor(pixel), 0, this.canvasHeight - 1);
 	}
 
+	private boolean canUndo() {
+		return !this.undoStack.isEmpty();
+	}
+
+	private boolean canRedo() {
+		return !this.redoStack.isEmpty();
+	}
+
+	private void finishStroke() {
+		if (this.strokeChanged && this.pendingUndoState != null) {
+			this.pushUndo(this.pendingUndoState);
+			this.redoStack.clear();
+		}
+
+		this.pendingUndoState = null;
+		this.strokeChanged = false;
+	}
+
+	private void undo() {
+		if (!this.canUndo()) {
+			return;
+		}
+
+		this.redoStack.push(this.captureState());
+		this.restoreState(this.undoStack.pop());
+	}
+
+	private void redo() {
+		if (!this.canRedo()) {
+			return;
+		}
+
+		this.pushUndo(this.captureState());
+		this.restoreState(this.redoStack.pop());
+	}
+
+	private void pushUndo(CanvasState state) {
+		if (this.undoStack.size() >= HISTORY_LIMIT) {
+			this.undoStack.removeLast();
+		}
+
+		this.undoStack.push(state);
+	}
+
+	private CanvasState captureState() {
+		return new CanvasState(this.canvasWidth, this.canvasHeight, this.pixels);
+	}
+
+	private void restoreState(CanvasState state) {
+		this.setCanvas(state.width(), state.height(), state.pixels(), true);
+		this.resolutionScaleIndex = this.findResolutionScaleIndex(this.canvasWidth, this.canvasHeight);
+		this.clampView();
+		this.lastPaintX = -1;
+		this.lastPaintY = -1;
+		this.pendingUndoState = null;
+		this.strokeChanged = false;
+	}
+
 	protected enum Mode {
 		BLACKBOARD,
 		STICKY_NOTE
+	}
+
+	private record CanvasState(int width, int height, int[] pixels) {
+		private CanvasState(int width, int height, int[] pixels) {
+			this.width = width;
+			this.height = height;
+			this.pixels = Arrays.copyOf(pixels, pixels.length);
+		}
 	}
 }

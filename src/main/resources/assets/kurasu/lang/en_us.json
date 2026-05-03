@@ -58,6 +58,8 @@
 	"gui.kurasu.lockpick_hint": "Keep it centered",
 	"gui.kurasu.draw_hint_mouse": "LMB: draw   RMB: pan",
 	"gui.kurasu.draw_hint_scroll": "Scroll: zoom   Ctrl+Scroll: brush %sx%s",
+	"gui.kurasu.draw_tool_undo": "Undo",
+	"gui.kurasu.draw_tool_redo": "Redo",
 	"gui.kurasu.draw_tool_brush": "Brush",
 	"gui.kurasu.draw_tool_eraser": "Eraser",
 	"gui.kurasu.draw_tool_picker": "Pick Color",
