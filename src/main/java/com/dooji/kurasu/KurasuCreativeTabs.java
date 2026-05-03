@@ -46,10 +46,10 @@ public class KurasuCreativeTabs {
 					output.accept(KurasuItems.LOCKPICK);
 					output.accept(KurasuItems.STICKY_NOTE);
 					output.accept(KurasuItems.BOOK_1);
+					output.accept(KurasuItems.ERASER);
 					for (Item item : KurasuItems.getChalkVariants()) {
 						output.accept(item);
 					}
-					output.accept(KurasuItems.ERASER);
 				})
 				.build()
 		);
