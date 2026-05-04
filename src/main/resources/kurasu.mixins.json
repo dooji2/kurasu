@@ -3,6 +3,7 @@
 	"package": "com.dooji.kurasu.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"mixins": [
+		"PlayerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

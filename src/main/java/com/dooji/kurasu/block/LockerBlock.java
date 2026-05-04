@@ -6,11 +6,14 @@ import com.dooji.kurasu.block.entity.LockerBlockEntity;
 import com.dooji.kurasu.item.KeyItem;
 import com.mojang.serialization.MapCodec;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.InteractionHand;
@@ -49,6 +52,10 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 public class LockerBlock extends BaseEntityBlock {
 	public static final MapCodec<LockerBlock> CODEC = simpleCodec(LockerBlock::new);
 	public static final EnumProperty<Part> PART = EnumProperty.create("part", Part.class);
+	private static final int SHOVE_SELECT_TICKS = 100;
+	private static final double SHOVE_SELECT_RANGE = 4.0;
+	private static final String LOCKER_SEAT_TAG = "kurasu_locker_seat";
+	private static final Map<UUID, PendingShove> PENDING_SHOVES = new HashMap<>();
 	private static final VoxelShape NORTH_SHAPE = Block.box(0.0, 0.0, 7.0, 16.0, 16.0, 16.0);
 	private static final VoxelShape SOUTH_SHAPE = Block.box(0.0, 0.0, 0.0, 16.0, 16.0, 9.0);
 	private static final VoxelShape WEST_SHAPE = Block.box(7.0, 0.0, 0.0, 16.0, 16.0, 16.0);
@@ -166,11 +173,18 @@ public class LockerBlock extends BaseEntityBlock {
 
 			if (level.getBlockEntity(pos) instanceof LockerBlockEntity blockEntity) {
 				if (player.isShiftKeyDown()) {
-					InteractionResult shoveResult = tryShovePlayerIn(state, level, pos, player, blockEntity);
-
-					if (shoveResult != InteractionResult.PASS) {
-						return shoveResult;
+					if (blockEntity.isStructureLocked() && !blockEntity.isStructureOpen()) {
+						player.sendOverlayMessage(Component.translatable("message.kurasu.locker_locked"));
+						return InteractionResult.SUCCESS_SERVER;
 					}
+
+					if (!blockEntity.isStructureOpen()) {
+						blockEntity.setStructureOpen(true);
+					}
+
+					armPlayerShove(state, level, pos, player);
+					player.sendOverlayMessage(Component.translatable("message.kurasu.locker_shove_ready"));
+					return InteractionResult.SUCCESS_SERVER;
 				}
 
 				if (blockEntity.isStructureLocked() && !blockEntity.isStructureOpen()) {
@@ -182,6 +196,39 @@ public class LockerBlock extends BaseEntityBlock {
 		}
 
 		return level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER;
+	}
+
+	public static InteractionResult tryShoveSelectedPlayer(Player player, Entity target) {
+		if (player.level().isClientSide() || !(player instanceof ServerPlayer) || !(target instanceof Player targetPlayer)) {
+			return InteractionResult.PASS;
+		}
+
+		PendingShove pendingShove = PENDING_SHOVES.remove(player.getUUID());
+
+		if (pendingShove == null || pendingShove.expired(player.level().getGameTime())) {
+			return InteractionResult.PASS;
+		}
+
+		if (targetPlayer.isSpectator() || targetPlayer.isPassenger() || player.distanceTo(targetPlayer) > SHOVE_SELECT_RANGE) {
+			return InteractionResult.PASS;
+		}
+
+		Level level = player.level();
+		BlockState state = level.getBlockState(pendingShove.controllerPos());
+
+		if (!(state.getBlock() instanceof LockerBlock locker) || state.getValue(BlockStateProperties.HORIZONTAL_FACING) != pendingShove.facing()) {
+			return InteractionResult.PASS;
+		}
+
+		if (!(level.getBlockEntity(pendingShove.controllerPos()) instanceof LockerBlockEntity blockEntity) || !blockEntity.isStructureOpen()) {
+			return InteractionResult.PASS;
+		}
+
+		return locker.shovePlayerIntoLocker(level, pendingShove.controllerPos(), state, blockEntity, targetPlayer);
+	}
+
+	public static boolean isLockerSeat(Entity entity) {
+		return entity instanceof AreaEffectCloud cloud && cloud.entityTags().contains(LOCKER_SEAT_TAG);
 	}
 
 	@Override
@@ -321,16 +368,13 @@ public class LockerBlock extends BaseEntityBlock {
 		player.sendOverlayMessage(Component.translatable("message.kurasu.locker_locked"));
 	}
 
-	private InteractionResult tryShovePlayerIn(BlockState state, Level level, BlockPos pos, Player player, LockerBlockEntity blockEntity) {
-		if (!blockEntity.isStructureOpen() || player.isPassenger() || player.isSpectator()) {
-			return InteractionResult.PASS;
-		}
-
+	private void armPlayerShove(BlockState state, Level level, BlockPos pos, Player player) {
 		BlockPos controllerPos = findControllerPos(level, pos, state.getValue(BlockStateProperties.HORIZONTAL_FACING));
-		BlockState controllerState = level.getBlockState(controllerPos);
-		Player target = findShoveTarget(level, controllerPos, player);
+		PENDING_SHOVES.put(player.getUUID(), new PendingShove(controllerPos, state.getValue(BlockStateProperties.HORIZONTAL_FACING), level.getGameTime() + SHOVE_SELECT_TICKS));
+	}
 
-		if (target == null) {
+	private InteractionResult shovePlayerIntoLocker(Level level, BlockPos controllerPos, BlockState controllerState, LockerBlockEntity blockEntity, Player target) {
+		if (target.isPassenger() || target.isSpectator()) {
 			return InteractionResult.PASS;
 		}
 
@@ -355,32 +399,11 @@ public class LockerBlock extends BaseEntityBlock {
 		return InteractionResult.SUCCESS_SERVER;
 	}
 
-	private Player findShoveTarget(Level level, BlockPos pos, Player player) {
-		Player bestTarget = null;
-		double bestDistance = Double.MAX_VALUE;
-		Vec3 center = Vec3.atCenterOf(pos);
-
-		for (Player candidate : level.getEntitiesOfClass(Player.class, new AABB(pos).inflate(1.0, 0.5, 1.0))) {
-			if (candidate == player || candidate.isSpectator() || candidate.isPassenger()) {
-				continue;
-			}
-
-			double distance = candidate.distanceToSqr(center);
-
-			if (distance < bestDistance) {
-				bestTarget = candidate;
-				bestDistance = distance;
-			}
-		}
-
-		return bestTarget;
-	}
-
 	private AreaEffectCloud createLockerSeat(Level level, BlockPos pos, BlockState state) {
 		BlockPos anchorPos = pos.immutable();
 		Block lockerBlock = state.getBlock();
 		Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
-		Vec3 seatPos = Vec3.atBottomCenterOf(pos).add(facing.getStepX() * 0.3125, 0.0, facing.getStepZ() * 0.3125);
+		Vec3 seatPos = Vec3.atBottomCenterOf(pos).add(facing.getStepX() * -0.1875, 0.0, facing.getStepZ() * -0.1875);
 		AreaEffectCloud seat = new AreaEffectCloud(level, seatPos.x(), seatPos.y(), seatPos.z()) {
 			@Override
 			public void tick() {
@@ -408,12 +431,13 @@ public class LockerBlock extends BaseEntityBlock {
 		seat.setWaitTime(0);
 		seat.setRadius(0.0f);
 		seat.setDuration(Integer.MAX_VALUE);
+		seat.addTag(LOCKER_SEAT_TAG);
 		level.addFreshEntity(seat);
 		return seat;
 	}
 
 	private AreaEffectCloud findLockerSeat(Level level, BlockPos pos) {
-		return level.getEntitiesOfClass(AreaEffectCloud.class, new AABB(pos).inflate(0.5), cloud -> cloud.isInvisible() && cloud.isNoGravity() && cloud.getRadius() == 0.0f)
+		return level.getEntitiesOfClass(AreaEffectCloud.class, new AABB(pos).inflate(0.5), LockerBlock::isLockerSeat)
 			.stream()
 			.findFirst()
 			.orElse(null);
@@ -453,6 +477,12 @@ public class LockerBlock extends BaseEntityBlock {
 
 	private boolean matchesStackNeighbor(BlockState state, Direction facing) {
 		return state.is(this) && state.getValue(BlockStateProperties.HORIZONTAL_FACING) == facing;
+	}
+
+	private record PendingShove(BlockPos controllerPos, Direction facing, long expiresAt) {
+		private boolean expired(long gameTime) {
+			return gameTime > this.expiresAt;
+		}
 	}
 
 	private VoxelShape getStaticShape(BlockState state) {

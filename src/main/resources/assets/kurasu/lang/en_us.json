@@ -66,6 +66,7 @@
 	"gui.kurasu.draw_tool_scale": "Resolution scale: %sx",
 	"message.kurasu.locker_locked": "Locked.",
 	"message.kurasu.locker_unlocked": "Unlocked.",
+	"message.kurasu.locker_shove_ready": "Pick a player to shove!",
 	"message.kurasu.safe_locked": "Safe locked.",
 	"message.kurasu.safe_unlocked": "Safe unlocked.",
 	"message.kurasu.safe_code_set": "Safe code set.",

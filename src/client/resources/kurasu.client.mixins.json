@@ -5,6 +5,7 @@
 	"client": [
 		"CreativeModeInventoryScreenMixin",
 		"KeyboardHandlerMixin",
+		"LivingEntityRendererMixin",
 		"MinecraftMixin",
 		"MouseHandlerMixin"
 	],
