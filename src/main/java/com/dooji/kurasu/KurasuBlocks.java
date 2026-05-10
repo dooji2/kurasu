@@ -70,19 +70,19 @@ public class KurasuBlocks {
 	public static final ChairBlock CHAIR_1 = registerBlock(CHAIR_1_ID, new ChairBlock(BlockBehaviour.Properties.of().setId(CHAIR_1_BLOCK_KEY).strength(2.0f).noOcclusion()));
 	public static final DeskBlock DESK = registerBlock(DESK_ID, new DeskBlock(BlockBehaviour.Properties.of().setId(DESK_BLOCK_KEY).strength(2.0f).noOcclusion()));
 	public static final DeskBlock DESK_1 = registerBlock(DESK_1_ID, new DeskBlock(BlockBehaviour.Properties.of().setId(DESK_1_BLOCK_KEY).strength(2.0f).noOcclusion()));
-	public static final Item LOCKER_ITEM = registerItem(LOCKER_ID, new BlockItem(LOCKER, new Item.Properties().setId(LOCKER_ITEM_KEY)));
-	public static final Item LOCKER_1_ITEM = registerItem(LOCKER_1_ID, new BlockItem(LOCKER_1, new Item.Properties().setId(LOCKER_1_ITEM_KEY)));
-	public static final Item SAFE_ITEM = registerItem(SAFE_ID, new BlockItem(SAFE, new Item.Properties().setId(SAFE_ITEM_KEY)));
-	public static final Item BLACKBOARD_ITEM = registerItem(BLACKBOARD_ID, new BlockItem(BLACKBOARD, new Item.Properties().setId(BLACKBOARD_ITEM_KEY)));
-	public static final Item BLACKBOARD_1_ITEM = registerItem(BLACKBOARD_1_ID, new BlockItem(BLACKBOARD_1, new Item.Properties().setId(BLACKBOARD_1_ITEM_KEY)));
-	public static final Item CONCRETE_WALL_ITEM = registerItem(CONCRETE_WALL_ID, new BlockItem(CONCRETE_WALL, new Item.Properties().setId(CONCRETE_WALL_ITEM_KEY)));
-	public static final Item CONCRETE_WALL_BOTTOM_ITEM = registerItem(CONCRETE_WALL_BOTTOM_ID, new BlockItem(CONCRETE_WALL_BOTTOM, new Item.Properties().setId(CONCRETE_WALL_BOTTOM_ITEM_KEY)));
-	public static final Item CONCRETE_WALL_BOTTOM_LEFT_ITEM = registerItem(CONCRETE_WALL_BOTTOM_LEFT_ID, new BlockItem(CONCRETE_WALL_BOTTOM_LEFT, new Item.Properties().setId(CONCRETE_WALL_BOTTOM_LEFT_ITEM_KEY)));
-	public static final Item CONCRETE_WALL_BOTTOM_RIGHT_ITEM = registerItem(CONCRETE_WALL_BOTTOM_RIGHT_ID, new BlockItem(CONCRETE_WALL_BOTTOM_RIGHT, new Item.Properties().setId(CONCRETE_WALL_BOTTOM_RIGHT_ITEM_KEY)));
-	public static final Item CHAIR_ITEM = registerItem(CHAIR_ID, new BlockItem(CHAIR, new Item.Properties().setId(CHAIR_ITEM_KEY)));
-	public static final Item CHAIR_1_ITEM = registerItem(CHAIR_1_ID, new BlockItem(CHAIR_1, new Item.Properties().setId(CHAIR_1_ITEM_KEY)));
-	public static final Item DESK_ITEM = registerItem(DESK_ID, new BlockItem(DESK, new Item.Properties().setId(DESK_ITEM_KEY)));
-	public static final Item DESK_1_ITEM = registerItem(DESK_1_ID, new BlockItem(DESK_1, new Item.Properties().setId(DESK_1_ITEM_KEY)));
+	public static final Item LOCKER_ITEM = registerItem(LOCKER_ID, new BlockItem(LOCKER, new Item.Properties().setId(LOCKER_ITEM_KEY).useBlockDescriptionPrefix()));
+	public static final Item LOCKER_1_ITEM = registerItem(LOCKER_1_ID, new BlockItem(LOCKER_1, new Item.Properties().setId(LOCKER_1_ITEM_KEY).useBlockDescriptionPrefix()));
+	public static final Item SAFE_ITEM = registerItem(SAFE_ID, new BlockItem(SAFE, new Item.Properties().setId(SAFE_ITEM_KEY).useBlockDescriptionPrefix()));
+	public static final Item BLACKBOARD_ITEM = registerItem(BLACKBOARD_ID, new BlockItem(BLACKBOARD, new Item.Properties().setId(BLACKBOARD_ITEM_KEY).useBlockDescriptionPrefix()));
+	public static final Item BLACKBOARD_1_ITEM = registerItem(BLACKBOARD_1_ID, new BlockItem(BLACKBOARD_1, new Item.Properties().setId(BLACKBOARD_1_ITEM_KEY).useBlockDescriptionPrefix()));
+	public static final Item CONCRETE_WALL_ITEM = registerItem(CONCRETE_WALL_ID, new BlockItem(CONCRETE_WALL, new Item.Properties().setId(CONCRETE_WALL_ITEM_KEY).useBlockDescriptionPrefix()));
+	public static final Item CONCRETE_WALL_BOTTOM_ITEM = registerItem(CONCRETE_WALL_BOTTOM_ID, new BlockItem(CONCRETE_WALL_BOTTOM, new Item.Properties().setId(CONCRETE_WALL_BOTTOM_ITEM_KEY).useBlockDescriptionPrefix()));
+	public static final Item CONCRETE_WALL_BOTTOM_LEFT_ITEM = registerItem(CONCRETE_WALL_BOTTOM_LEFT_ID, new BlockItem(CONCRETE_WALL_BOTTOM_LEFT, new Item.Properties().setId(CONCRETE_WALL_BOTTOM_LEFT_ITEM_KEY).useBlockDescriptionPrefix()));
+	public static final Item CONCRETE_WALL_BOTTOM_RIGHT_ITEM = registerItem(CONCRETE_WALL_BOTTOM_RIGHT_ID, new BlockItem(CONCRETE_WALL_BOTTOM_RIGHT, new Item.Properties().setId(CONCRETE_WALL_BOTTOM_RIGHT_ITEM_KEY).useBlockDescriptionPrefix()));
+	public static final Item CHAIR_ITEM = registerItem(CHAIR_ID, new BlockItem(CHAIR, new Item.Properties().setId(CHAIR_ITEM_KEY).useBlockDescriptionPrefix()));
+	public static final Item CHAIR_1_ITEM = registerItem(CHAIR_1_ID, new BlockItem(CHAIR_1, new Item.Properties().setId(CHAIR_1_ITEM_KEY).useBlockDescriptionPrefix()));
+	public static final Item DESK_ITEM = registerItem(DESK_ID, new BlockItem(DESK, new Item.Properties().setId(DESK_ITEM_KEY).useBlockDescriptionPrefix()));
+	public static final Item DESK_1_ITEM = registerItem(DESK_1_ID, new BlockItem(DESK_1, new Item.Properties().setId(DESK_1_ITEM_KEY).useBlockDescriptionPrefix()));
 
 	public static void init() {
 	}
