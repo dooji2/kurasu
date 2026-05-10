@@ -4,6 +4,7 @@ import com.dooji.kurasu.Kurasu;
 import com.dooji.kurasu.block.SafeBlock;
 import com.dooji.kurasu.block.entity.SafeBlockEntity;
 import com.dooji.kurasu.network.SubmitSafeActionPayload;
+import com.dooji.kurasu.network.ToggleOperatorLockPayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -13,6 +14,7 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.phys.BlockHitResult;
 
 public class SafeCodeScreen extends Screen {
@@ -58,7 +60,14 @@ public class SafeCodeScreen extends Screen {
 			return false;
 		}
 
+		boolean operator = minecraft.player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
+		boolean operatorLocked = blockEntity.isOperatorLocked();
+
 		if (!blockEntity.hasCode()) {
+			if (operatorLocked && !operator) {
+				return false;
+			}
+
 			minecraft.setScreen(new SafeCodeScreen(blockPos, Mode.SET_CODE, false));
 			return true;
 		}
@@ -147,26 +156,40 @@ public class SafeCodeScreen extends Screen {
 		for (int i = 0; i < 9; i++) {
 			int column = i % 3;
 			int row = i / 3;
-			this.drawButton(gfx, mouseX, mouseY, this.buttonX(column), this.buttonY(row), this.buttonWidth, Component.literal(Integer.toString(i + 1)));
+			this.drawButton(gfx, mouseX, mouseY, this.buttonX(column), this.buttonY(row), this.buttonWidth, Component.literal(Integer.toString(i + 1)), true);
 		}
 
-		this.drawButton(gfx, mouseX, mouseY, this.buttonX(0), this.buttonY(3), this.buttonWidth, Component.translatable("gui.kurasu.clear"));
-		this.drawButton(gfx, mouseX, mouseY, this.buttonX(1), this.buttonY(3), this.buttonWidth, Component.literal("0"));
-		this.drawButton(gfx, mouseX, mouseY, this.buttonX(2), this.buttonY(3), this.buttonWidth, Component.translatable("gui.kurasu.confirm"));
+		this.drawButton(gfx, mouseX, mouseY, this.buttonX(0), this.buttonY(3), this.buttonWidth, Component.translatable("gui.kurasu.clear"), true);
+		this.drawButton(gfx, mouseX, mouseY, this.buttonX(1), this.buttonY(3), this.buttonWidth, Component.literal("0"), true);
+		this.drawButton(gfx, mouseX, mouseY, this.buttonX(2), this.buttonY(3), this.buttonWidth, Component.translatable("gui.kurasu.confirm"), true);
 	}
 
 	private void drawControlButtons(GuiGraphicsExtractor gfx, int mouseX, int mouseY) {
 		Component openLabel = this.open ? Component.translatable("gui.kurasu.close") : Component.translatable("gui.kurasu.open");
-		this.drawButton(gfx, mouseX, mouseY, this.buttonX(0), this.buttonY(0), this.wideButtonWidth, openLabel);
-		this.drawButton(gfx, mouseX, mouseY, this.buttonX(0), this.buttonY(1), this.wideButtonWidth, Component.translatable("gui.kurasu.lock"));
-		this.drawButton(gfx, mouseX, mouseY, this.buttonX(0), this.buttonY(2), this.wideButtonWidth, Component.translatable("gui.kurasu.change_code"));
+		this.drawButton(gfx, mouseX, mouseY, this.buttonX(0), this.buttonY(0), this.wideButtonWidth, openLabel, true);
+		this.drawButton(gfx, mouseX, mouseY, this.buttonX(0), this.buttonY(1), this.wideButtonWidth, Component.translatable("gui.kurasu.lock"), this.canUseLockControls());
+		this.drawButton(gfx, mouseX, mouseY, this.buttonX(0), this.buttonY(2), this.wideButtonWidth, Component.translatable("gui.kurasu.change_code"), this.canUseLockControls());
+		this.drawButton(
+			gfx,
+			mouseX,
+			mouseY,
+			this.buttonX(0),
+			this.buttonY(3),
+			this.wideButtonWidth,
+			Component.translatable(this.isOperatorLocked() ? "gui.kurasu.op_unlock" : "gui.kurasu.op_lock"),
+			this.isOperator()
+		);
 	}
 
-	private void drawButton(GuiGraphicsExtractor gfx, int mouseX, int mouseY, int x, int y, int width, Component label) {
-		boolean hovered = this.isInside(mouseX, mouseY, x, y, width, this.buttonHeight);
+	private void drawButton(GuiGraphicsExtractor gfx, int mouseX, int mouseY, int x, int y, int width, Component label, boolean enabled) {
+		boolean hovered = enabled && this.isInside(mouseX, mouseY, x, y, width, this.buttonHeight);
 		int sourceX = hovered ? 67 : 100;
 		int sourceY = hovered ? 24 : 19;
 		gfx.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, x, y, sourceX, sourceY, width, this.buttonHeight, 11, 10, 142, 70);
+		if (!enabled) {
+			gfx.fill(x + this.scale, y + this.scale, x + width - this.scale, y + this.buttonHeight - this.scale, 0x88000000);
+		}
+
 		gfx.centeredText(this.font, label, x + width / 2, y + (this.buttonHeight - 8) / 2, 0xFFFFFFFF);
 	}
 
@@ -177,19 +200,42 @@ public class SafeCodeScreen extends Screen {
 			return true;
 		}
 
-		if (this.isInside(mouseX, mouseY, this.buttonX(0), this.buttonY(1), this.wideButtonWidth, this.buttonHeight)) {
+		if (this.isInside(mouseX, mouseY, this.buttonX(0), this.buttonY(1), this.wideButtonWidth, this.buttonHeight) && this.canUseLockControls()) {
 			ClientPlayNetworking.send(new SubmitSafeActionPayload(this.blockPos, SubmitSafeActionPayload.ACTION_LOCK, ""));
 			this.onClose();
 			return true;
 		}
 
-		if (this.isInside(mouseX, mouseY, this.buttonX(0), this.buttonY(2), this.wideButtonWidth, this.buttonHeight)) {
+		if (this.isInside(mouseX, mouseY, this.buttonX(0), this.buttonY(2), this.wideButtonWidth, this.buttonHeight) && this.canUseLockControls()) {
 			this.mode = Mode.CHANGE_CODE;
 			this.code = "";
 			return true;
 		}
 
+		if (this.isInside(mouseX, mouseY, this.buttonX(0), this.buttonY(3), this.wideButtonWidth, this.buttonHeight) && this.isOperator()) {
+			ClientPlayNetworking.send(new ToggleOperatorLockPayload(this.blockPos));
+			this.onClose();
+			return true;
+		}
+
 		return false;
+	}
+
+	private boolean canUseLockControls() {
+		return !this.isOperatorLocked() || this.isOperator();
+	}
+
+	private boolean isOperatorLocked() {
+		return this.minecraft != null
+			&& this.minecraft.level != null
+			&& this.minecraft.level.getBlockEntity(this.blockPos) instanceof SafeBlockEntity blockEntity
+			&& blockEntity.isOperatorLocked();
+	}
+
+	private boolean isOperator() {
+		return this.minecraft != null
+			&& this.minecraft.player != null
+			&& this.minecraft.player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
 	}
 
 	private boolean clickKeypadButton(double mouseX, double mouseY) {

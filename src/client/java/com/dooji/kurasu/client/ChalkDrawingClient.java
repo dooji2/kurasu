@@ -8,6 +8,7 @@ import com.dooji.kurasu.network.DrawBlackboardPixelPayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.permissions.Permissions;
 import net.minecraft.util.Mth;
 
 public final class ChalkDrawingClient {
@@ -64,6 +65,13 @@ public final class ChalkDrawingClient {
 		int width = BlackboardBlockEntity.DRAW_WIDTH;
 		int height = BlackboardBlockEntity.DRAW_HEIGHT;
 		if (minecraft.level.getBlockEntity(hit.blockPos()) instanceof BlackboardBlockEntity blackboard) {
+			if (blackboard.isOperatorLocked() && !minecraft.player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
+				lastBlockPos = null;
+				lastPixelX = -1;
+				lastPixelY = -1;
+				return false;
+			}
+
 			width = blackboard.getDrawData().width();
 			height = blackboard.getDrawData().height();
 		}

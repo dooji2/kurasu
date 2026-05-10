@@ -14,6 +14,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.permissions.Permissions;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.InteractionHand;
@@ -173,6 +174,16 @@ public class LockerBlock extends BaseEntityBlock {
 
 			if (level.getBlockEntity(pos) instanceof LockerBlockEntity blockEntity) {
 				if (player.isShiftKeyDown()) {
+					if (player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
+						blockEntity.setOperatorLocked(!blockEntity.isOperatorLocked());
+						player.sendOverlayMessage(Component.translatable(blockEntity.isOperatorLocked() ? "message.kurasu.op_locked" : "message.kurasu.op_unlocked"));
+						return InteractionResult.SUCCESS_SERVER;
+					}
+
+					if (!canUseProtectedFeatures(player, blockEntity)) {
+						return InteractionResult.SUCCESS_SERVER;
+					}
+
 					if (blockEntity.isStructureLocked() && !blockEntity.isStructureOpen()) {
 						player.sendOverlayMessage(Component.translatable("message.kurasu.locker_locked"));
 						return InteractionResult.SUCCESS_SERVER;
@@ -224,6 +235,10 @@ public class LockerBlock extends BaseEntityBlock {
 			return InteractionResult.PASS;
 		}
 
+		if (blockEntity.isOperatorLocked() && !player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
+			return InteractionResult.PASS;
+		}
+
 		return locker.shovePlayerIntoLocker(level, pendingShove.controllerPos(), state, blockEntity, targetPlayer);
 	}
 
@@ -239,6 +254,10 @@ public class LockerBlock extends BaseEntityBlock {
 
 		if (itemStack.getItem() == KurasuItems.KEY) {
 			if (!level.isClientSide() && level.getBlockEntity(pos) instanceof LockerBlockEntity blockEntity) {
+				if (!canUseProtectedFeatures(player, blockEntity)) {
+					return InteractionResult.SUCCESS_SERVER;
+				}
+
 				useKeyOnLocker(player, itemStack, blockEntity);
 			}
 
@@ -286,6 +305,7 @@ public class LockerBlock extends BaseEntityBlock {
 		boolean open = false;
 		boolean locked = false;
 		boolean pickedOpen = false;
+		boolean operatorLocked = false;
 		String lockId = "";
 		List<BlockPos> stack = collectStack(level, controllerPos, facing);
 
@@ -294,6 +314,7 @@ public class LockerBlock extends BaseEntityBlock {
 				open |= blockEntity.isStructureOpen();
 				locked |= blockEntity.isStructureLocked();
 				pickedOpen |= blockEntity.isStructurePickedOpen();
+				operatorLocked |= blockEntity.isOperatorLocked();
 
 				if (lockId.isBlank() && !blockEntity.getStructureLockId().isBlank()) {
 					lockId = blockEntity.getStructureLockId();
@@ -311,7 +332,7 @@ public class LockerBlock extends BaseEntityBlock {
 			}
 
 			if (level.getBlockEntity(scanPos) instanceof LockerBlockEntity blockEntity) {
-				blockEntity.setStructureData(controllerPos, open, locked, lockId, open && pickedOpen);
+				blockEntity.setStructureData(controllerPos, open, locked, lockId, open && pickedOpen, operatorLocked);
 			}
 		}
 	}
@@ -366,6 +387,15 @@ public class LockerBlock extends BaseEntityBlock {
 
 		blockEntity.setStructureState(false, true, currentLockId, false);
 		player.sendOverlayMessage(Component.translatable("message.kurasu.locker_locked"));
+	}
+
+	private boolean canUseProtectedFeatures(Player player, LockerBlockEntity blockEntity) {
+		if (!blockEntity.isOperatorLocked() || player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
+			return true;
+		}
+
+		player.sendOverlayMessage(Component.translatable("message.kurasu.op_only"));
+		return false;
 	}
 
 	private void armPlayerShove(BlockState state, Level level, BlockPos pos, Player player) {

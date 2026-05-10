@@ -12,12 +12,14 @@ import com.dooji.kurasu.network.PickUpAccessoryPayload;
 import com.dooji.kurasu.network.SaveBlackboardPayload;
 import com.dooji.kurasu.network.SaveStickyNotePayload;
 import com.dooji.kurasu.network.SubmitSafeActionPayload;
+import com.dooji.kurasu.network.ToggleOperatorLockPayload;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.item.ItemStack;
 
 public class KurasuNetworking {
@@ -29,6 +31,7 @@ public class KurasuNetworking {
 		PayloadTypeRegistry.serverboundPlay().register(SaveBlackboardPayload.TYPE, SaveBlackboardPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(SaveStickyNotePayload.TYPE, SaveStickyNotePayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(SubmitSafeActionPayload.TYPE, SubmitSafeActionPayload.CODEC);
+		PayloadTypeRegistry.serverboundPlay().register(ToggleOperatorLockPayload.TYPE, ToggleOperatorLockPayload.CODEC);
 		ServerPlayNetworking.registerGlobalReceiver(DrawBlackboardPixelPayload.TYPE, (payload, context) -> context.server().execute(() -> drawBlackboardPixel(context.player(), payload)));
 		ServerPlayNetworking.registerGlobalReceiver(FinishLockpickPayload.TYPE, (payload, context) -> context.server().execute(() -> finishLockpick(context.player(), payload)));
 		ServerPlayNetworking.registerGlobalReceiver(PlaceAccessoryPayload.TYPE, (payload, context) -> context.server().execute(() -> placeAccessory(context.player(), payload)));
@@ -36,6 +39,7 @@ public class KurasuNetworking {
 		ServerPlayNetworking.registerGlobalReceiver(SaveBlackboardPayload.TYPE, (payload, context) -> context.server().execute(() -> saveBlackboard(context.player(), payload)));
 		ServerPlayNetworking.registerGlobalReceiver(SaveStickyNotePayload.TYPE, (payload, context) -> context.server().execute(() -> saveStickyNote(context.player(), payload)));
 		ServerPlayNetworking.registerGlobalReceiver(SubmitSafeActionPayload.TYPE, (payload, context) -> context.server().execute(() -> submitSafeAction(context.player(), payload)));
+		ServerPlayNetworking.registerGlobalReceiver(ToggleOperatorLockPayload.TYPE, (payload, context) -> context.server().execute(() -> toggleOperatorLock(context.player(), payload)));
 	}
 
 	private static void finishLockpick(ServerPlayer player, FinishLockpickPayload payload) {
@@ -44,6 +48,10 @@ public class KurasuNetworking {
 		}
 
 		if (!(player.level().getBlockEntity(payload.blockPos()) instanceof LockerBlockEntity locker)) {
+			return;
+		}
+
+		if (!canUseOperatorLocked(player, locker.isOperatorLocked(), true)) {
 			return;
 		}
 
@@ -72,6 +80,10 @@ public class KurasuNetworking {
 		}
 
 		if (player.level().getBlockEntity(payload.blockPos()) instanceof BlackboardBlockEntity blackboard) {
+			if (!canUseOperatorLocked(player, blackboard.isOperatorLocked(), false)) {
+				return;
+			}
+
 			blackboard.setPixel(payload.x(), payload.y(), color);
 		}
 	}
@@ -87,7 +99,7 @@ public class KurasuNetworking {
 			return;
 		}
 
-		if (!canModifyAccessories(player, payload.blockPos())) {
+		if (!canModifyAccessories(player, payload.blockPos(), accessoryBlock)) {
 			return;
 		}
 
@@ -109,7 +121,7 @@ public class KurasuNetworking {
 			return;
 		}
 
-		if (!canModifyAccessories(player, payload.blockPos())) {
+		if (!canModifyAccessories(player, payload.blockPos(), accessoryBlock)) {
 			return;
 		}
 
@@ -130,6 +142,10 @@ public class KurasuNetworking {
 		}
 
 		if (player.level().getBlockEntity(payload.blockPos()) instanceof BlackboardBlockEntity blackboard) {
+			if (!canUseOperatorLocked(player, blackboard.isOperatorLocked(), false)) {
+				return;
+			}
+
 			blackboard.setDrawData(new DrawData(payload.width(), payload.height(), payload.pixels()));
 		}
 	}
@@ -160,6 +176,10 @@ public class KurasuNetworking {
 	}
 
 	private static void setSafeCode(ServerPlayer player, SafeBlockEntity safe, String code) {
+		if (!canUseOperatorLocked(player, safe.isOperatorLocked(), true)) {
+			return;
+		}
+
 		if (!isValidSafeCode(code)) {
 			return;
 		}
@@ -193,9 +213,24 @@ public class KurasuNetworking {
 	}
 
 	private static void lockSafe(ServerPlayer player, SafeBlockEntity safe) {
+		if (!canUseOperatorLocked(player, safe.isOperatorLocked(), true)) {
+			return;
+		}
+
 		if (safe.hasCode()) {
 			safe.setStructureState(false, true, "", false);
 			player.sendOverlayMessage(Component.translatable("message.kurasu.safe_locked"));
+		}
+	}
+
+	private static void toggleOperatorLock(ServerPlayer player, ToggleOperatorLockPayload payload) {
+		if (!isOperator(player) || tooFar(player, payload.blockPos(), 4.0)) {
+			return;
+		}
+
+		if (player.level().getBlockEntity(payload.blockPos()) instanceof AccessoryBlockEntity blockEntity) {
+			blockEntity.setOperatorLocked(!blockEntity.isOperatorLocked());
+			player.sendOverlayMessage(Component.translatable(blockEntity.isOperatorLocked() ? "message.kurasu.op_locked" : "message.kurasu.op_unlocked"));
 		}
 	}
 
@@ -204,8 +239,26 @@ public class KurasuNetworking {
 		return player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > reach * reach;
 	}
 
-	private static boolean canModifyAccessories(ServerPlayer player, BlockPos blockPos) {
-		return !player.blockActionRestricted(player.level(), blockPos, player.gameMode()) && player.mayUseItemAt(blockPos, Direction.UP, player.getMainHandItem());
+	private static boolean canModifyAccessories(ServerPlayer player, BlockPos blockPos, AccessoryBlockEntity accessoryBlock) {
+		return canUseOperatorLocked(player, accessoryBlock.isOperatorLocked(), true)
+			&& !player.blockActionRestricted(player.level(), blockPos, player.gameMode())
+			&& player.mayUseItemAt(blockPos, Direction.UP, player.getMainHandItem());
+	}
+
+	private static boolean canUseOperatorLocked(ServerPlayer player, boolean operatorLocked, boolean notify) {
+		if (!operatorLocked || isOperator(player)) {
+			return true;
+		}
+
+		if (notify) {
+			player.sendOverlayMessage(Component.translatable("message.kurasu.op_only"));
+		}
+
+		return false;
+	}
+
+	private static boolean isOperator(ServerPlayer player) {
+		return player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
 	}
 
 	private static boolean isValidSafeCode(String code) {

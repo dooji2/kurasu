@@ -1,9 +1,9 @@
 package com.dooji.kurasu.block.entity;
 
-import com.mojang.serialization.Codec;
 import com.dooji.kurasu.Kurasu;
 import com.dooji.kurasu.item.DrawData;
 import com.dooji.kurasu.network.PlaceAccessoryPayload;
+import com.mojang.serialization.Codec;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -21,6 +21,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 public class AccessoryBlockEntity extends BlockEntity {
 	private static final int MAX_ACCESSORIES = 24;
 	private List<PlacedAccessory> accessories = new ArrayList<>();
+	private boolean operatorLocked;
 
 	public AccessoryBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState blockState) {
 		super(type, pos, blockState);
@@ -28,6 +29,35 @@ public class AccessoryBlockEntity extends BlockEntity {
 
 	public List<PlacedAccessory> getAccessories() {
 		return this.accessories;
+	}
+
+	public boolean isOperatorLocked() {
+		return this.isLocalOperatorLocked();
+	}
+
+	public void setOperatorLocked(boolean operatorLocked) {
+		if (!this.setLocalOperatorLocked(operatorLocked)) {
+			return;
+		}
+
+		this.setChanged();
+
+		if (this.level != null) {
+			this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), Block.UPDATE_ALL);
+		}
+	}
+
+	protected boolean isLocalOperatorLocked() {
+		return this.operatorLocked;
+	}
+
+	protected boolean setLocalOperatorLocked(boolean operatorLocked) {
+		if (this.operatorLocked == operatorLocked) {
+			return false;
+		}
+
+		this.operatorLocked = operatorLocked;
+		return true;
 	}
 
 	public boolean addAccessory(PlacedAccessory accessory) {
@@ -64,6 +94,7 @@ public class AccessoryBlockEntity extends BlockEntity {
 	protected void loadAdditional(ValueInput input) {
 		super.loadAdditional(input);
 		this.accessories = new ArrayList<>();
+		this.operatorLocked = input.getInt("operator_locked").orElse(0) != 0;
 
 		for (ValueInput accessoryInput : input.childrenListOrEmpty("accessories")) {
 			this.accessories.add(PlacedAccessory.read(accessoryInput));
@@ -73,6 +104,7 @@ public class AccessoryBlockEntity extends BlockEntity {
 	@Override
 	protected void saveAdditional(ValueOutput output) {
 		super.saveAdditional(output);
+		output.putInt("operator_locked", this.operatorLocked ? 1 : 0);
 		ValueOutput.ValueOutputList accessoriesOutput = output.childrenList("accessories");
 
 		for (PlacedAccessory accessory : this.accessories) {

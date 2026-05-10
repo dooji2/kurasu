@@ -61,12 +61,18 @@ public class LockerBlockEntity extends AccessoryBlockEntity {
 		return this.getController().lockId;
 	}
 
-	public void setStructureData(BlockPos controllerPos, boolean open, boolean locked, String lockId, boolean pickedOpen) {
+	public boolean isOperatorLocked() {
+		return this.getController().isLocalOperatorLocked();
+	}
+
+	public void setStructureData(BlockPos controllerPos, boolean open, boolean locked, String lockId, boolean pickedOpen, boolean operatorLocked) {
+		boolean operatorLockChanged = this.setLocalOperatorLocked(operatorLocked);
 		boolean changed = !this.controllerPos.equals(controllerPos)
 			|| this.open != open
 			|| this.locked != locked
 			|| !this.lockId.equals(lockId)
-			|| this.pickedOpen != pickedOpen;
+			|| this.pickedOpen != pickedOpen
+			|| operatorLockChanged;
 		this.controllerPos = controllerPos;
 		this.open = open;
 		this.locked = locked;
@@ -97,7 +103,15 @@ public class LockerBlockEntity extends AccessoryBlockEntity {
 			return;
 		}
 
-		this.applyStructureState(this.resolveStructureRootPos(), open, locked, lockId, pickedOpen);
+		this.applyStructureState(this.resolveStructureRootPos(), open, locked, lockId, pickedOpen, this.isOperatorLocked());
+	}
+
+	public void setOperatorLocked(boolean operatorLocked) {
+		if (this.level == null || this.level.isClientSide()) {
+			return;
+		}
+
+		this.applyStructureState(this.resolveStructureRootPos(), this.isStructureOpen(), this.isStructureLocked(), this.getStructureLockId(), this.isStructurePickedOpen(), operatorLocked);
 	}
 
 	public void pickStructureOpen() {
@@ -154,12 +168,12 @@ public class LockerBlockEntity extends AccessoryBlockEntity {
 		return rootPos;
 	}
 
-	private void applyStructureState(BlockPos rootPos, boolean open, boolean locked, String lockId, boolean pickedOpen) {
+	private void applyStructureState(BlockPos rootPos, boolean open, boolean locked, String lockId, boolean pickedOpen, boolean operatorLocked) {
 		BlockState rootState = this.level.getBlockState(rootPos);
 
 		if (!(rootState.getBlock() instanceof LockerBlock locker)) {
 			if (this.level.getBlockEntity(rootPos) instanceof LockerBlockEntity blockEntity) {
-				blockEntity.setStructureData(rootPos, open, locked, lockId, pickedOpen);
+				blockEntity.setStructureData(rootPos, open, locked, lockId, pickedOpen, operatorLocked);
 			}
 
 			return;
@@ -169,7 +183,7 @@ public class LockerBlockEntity extends AccessoryBlockEntity {
 
 		for (BlockPos scanPos = rootPos; matchesStackNeighbor(this.level.getBlockState(scanPos), locker, facing); scanPos = scanPos.above()) {
 			if (this.level.getBlockEntity(scanPos) instanceof LockerBlockEntity blockEntity) {
-				blockEntity.setStructureData(rootPos, open, locked, lockId, pickedOpen);
+				blockEntity.setStructureData(rootPos, open, locked, lockId, pickedOpen, operatorLocked);
 			}
 		}
 	}

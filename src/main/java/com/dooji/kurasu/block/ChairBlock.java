@@ -5,6 +5,8 @@ import com.dooji.kurasu.block.entity.AccessoryBlockEntity;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.permissions.Permissions;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -89,6 +91,10 @@ public class ChairBlock extends BaseEntityBlock {
 
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+		if (player.isShiftKeyDown()) {
+			return tryToggleOperatorLock(level, pos, player);
+		}
+
 		return trySit(state, level, pos, player);
 	}
 
@@ -143,6 +149,23 @@ public class ChairBlock extends BaseEntityBlock {
 		if (!player.startRiding(seat)) {
 			seat.discard();
 			return InteractionResult.PASS;
+		}
+
+		return InteractionResult.SUCCESS_SERVER;
+	}
+
+	private InteractionResult tryToggleOperatorLock(Level level, BlockPos pos, Player player) {
+		if (!player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
+			return InteractionResult.PASS;
+		}
+
+		if (level.isClientSide()) {
+			return InteractionResult.SUCCESS;
+		}
+
+		if (level.getBlockEntity(pos) instanceof AccessoryBlockEntity blockEntity) {
+			blockEntity.setOperatorLocked(!blockEntity.isOperatorLocked());
+			player.sendOverlayMessage(Component.translatable(blockEntity.isOperatorLocked() ? "message.kurasu.op_locked" : "message.kurasu.op_unlocked"));
 		}
 
 		return InteractionResult.SUCCESS_SERVER;
