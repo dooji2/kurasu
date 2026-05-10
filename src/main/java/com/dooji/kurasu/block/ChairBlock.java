@@ -104,6 +104,10 @@ public class ChairBlock extends BaseEntityBlock {
 			return super.useItemOn(itemStack, state, level, pos, player, hand, hitResult);
 		}
 
+		if (player.isShiftKeyDown()) {
+			return tryToggleOperatorLock(level, pos, player);
+		}
+
 		return trySit(state, level, pos, player);
 	}
 
