@@ -46,7 +46,7 @@ public final class ObjSpecialModelRenderer implements NoDataSpecialModelRenderer
 
 					for (MeshVertex vertex : face.vertices) {
 						Vector4f transformed = pose.pose().transform(new Vector4f(vertex.position.x(), vertex.position.y(), vertex.position.z(), 1.0f));
-						vertexConsumer.addVertex(transformed.x(), transformed.y(), transformed.z(), -1, vertex.u, vertex.v, overlay, lightCoords, normal.x(), normal.y(), normal.z());
+						vertexConsumer.addVertex(transformed.x() + normal.x() * 0.0005f, transformed.y() + normal.y() * 0.0005f, transformed.z() + normal.z() * 0.0005f, -1, vertex.u, vertex.v, overlay, lightCoords, normal.x(), normal.y(), normal.z());
 					}
 				}
 			});

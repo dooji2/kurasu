@@ -174,12 +174,6 @@ public class LockerBlock extends BaseEntityBlock {
 
 			if (level.getBlockEntity(pos) instanceof LockerBlockEntity blockEntity) {
 				if (player.isShiftKeyDown()) {
-					if (player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
-						blockEntity.setOperatorLocked(!blockEntity.isOperatorLocked());
-						player.sendOverlayMessage(Component.translatable(blockEntity.isOperatorLocked() ? "message.kurasu.op_locked" : "message.kurasu.op_unlocked"));
-						return InteractionResult.SUCCESS_SERVER;
-					}
-
 					if (!canUseProtectedFeatures(player, blockEntity)) {
 						return InteractionResult.SUCCESS_SERVER;
 					}
@@ -254,6 +248,12 @@ public class LockerBlock extends BaseEntityBlock {
 
 		if (itemStack.getItem() == KurasuItems.KEY) {
 			if (!level.isClientSide() && level.getBlockEntity(pos) instanceof LockerBlockEntity blockEntity) {
+				if (player.isShiftKeyDown() && player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
+					blockEntity.setOperatorLocked(!blockEntity.isOperatorLocked());
+					player.sendOverlayMessage(Component.translatable(blockEntity.isOperatorLocked() ? "message.kurasu.op_locked" : "message.kurasu.op_unlocked"));
+					return InteractionResult.SUCCESS_SERVER;
+				}
+
 				if (!canUseProtectedFeatures(player, blockEntity)) {
 					return InteractionResult.SUCCESS_SERVER;
 				}

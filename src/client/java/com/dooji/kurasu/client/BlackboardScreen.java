@@ -10,6 +10,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.permissions.Permissions;
@@ -61,8 +62,20 @@ public class BlackboardScreen extends DrawScreen {
 	}
 
 	@Override
-	protected boolean canModifyCanvas() {
-		return !this.isOperatorLocked() || this.isOperator();
+	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		if (event.button() == 0 && this.isOperatorLocked() && !this.isOperator()) {
+			int guiX = Math.max(12, (this.width - 250) / 2);
+			int guiY = Math.max(12, (this.height - 196) / 2);
+
+			if (
+				(event.x() >= guiX + 8 && event.x() < guiX + 18 && event.y() >= guiY + 8 && event.y() < guiY + 172)
+				|| (event.x() >= guiX + 24 && event.x() < guiX + 242 && event.y() >= guiY + 8 && event.y() < guiY + 172)
+			) {
+				return true;
+			}
+		}
+
+		return super.mouseClicked(event, doubleClick);
 	}
 
 	@Override

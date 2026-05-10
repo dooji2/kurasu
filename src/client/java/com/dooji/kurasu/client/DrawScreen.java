@@ -151,10 +151,6 @@ public abstract class DrawScreen extends Screen {
 
 			int listTop = top + 7;
 			if (this.isInside(event.x(), event.y(), x, listTop, 10, bottom - listTop)) {
-				if (!this.canModifyCanvas()) {
-					return true;
-				}
-
 				int index = this.toolScroll + (int) ((event.y() - listTop) / 10);
 
 				if (index < this.toolEntryCount()) {
@@ -184,10 +180,6 @@ public abstract class DrawScreen extends Screen {
 			}
 
 			if (this.isInside(event.x(), event.y(), this.canvasDrawLeft(), this.canvasDrawTop(), this.canvasDrawWidth(), this.canvasDrawHeight())) {
-				if (!this.canModifyCanvas()) {
-					return true;
-				}
-
 				if (this.pickerMode) {
 					this.pickColorAt(event.x(), event.y());
 					return true;
@@ -408,7 +400,7 @@ public abstract class DrawScreen extends Screen {
 		this.painting = false;
 		this.panning = false;
 
-		if (this.modified && this.canModifyCanvas()) {
+		if (this.modified) {
 			this.save(this.canvasWidth, this.canvasHeight, this.pixels);
 		}
 
@@ -425,10 +417,6 @@ public abstract class DrawScreen extends Screen {
 	}
 
 	protected abstract void save(int width, int height, int[] pixels);
-
-	protected boolean canModifyCanvas() {
-		return true;
-	}
 
 	private void drawHints(GuiGraphicsExtractor gfx) {
 		int lineHeight = 9;
@@ -505,10 +493,6 @@ public abstract class DrawScreen extends Screen {
 	}
 
 	private void paintAt(double mouseX, double mouseY) {
-		if (!this.canModifyCanvas()) {
-			return;
-		}
-
 		int x = this.mouseToCanvasX(mouseX);
 		int y = this.mouseToCanvasY(mouseY);
 
@@ -576,10 +560,6 @@ public abstract class DrawScreen extends Screen {
 	}
 
 	private void cycleResolutionScale() {
-		if (!this.canModifyCanvas()) {
-			return;
-		}
-
 		CanvasState before = this.captureState();
 		this.resolutionScaleIndex = (this.resolutionScaleIndex + 1) % RESOLUTION_SCALES.length;
 		int newWidth = this.baseCanvasWidth * RESOLUTION_SCALES[this.resolutionScaleIndex];
@@ -724,10 +704,6 @@ public abstract class DrawScreen extends Screen {
 	}
 
 	private void undo() {
-		if (!this.canModifyCanvas()) {
-			return;
-		}
-
 		if (!this.canUndo()) {
 			return;
 		}
@@ -737,10 +713,6 @@ public abstract class DrawScreen extends Screen {
 	}
 
 	private void redo() {
-		if (!this.canModifyCanvas()) {
-			return;
-		}
-
 		if (!this.canRedo()) {
 			return;
 		}

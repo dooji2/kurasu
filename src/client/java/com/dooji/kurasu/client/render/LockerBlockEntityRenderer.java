@@ -97,7 +97,7 @@ public class LockerBlockEntityRenderer<T extends AccessoryBlockEntity> implement
 			normal.rotateY(doorAngle);
 		}
 
-		normal = rotateNormal(normal, facing);
+		normal = rotateNormal(normal, facing).normalize();
 
 		for (int i = 0; i < face.vertices.size(); i++) {
 			MeshVertex vertex = face.vertices.get(i);
@@ -107,7 +107,7 @@ public class LockerBlockEntityRenderer<T extends AccessoryBlockEntity> implement
 				position.sub(doorPivot).rotateY(doorAngle).add(doorPivot);
 			}
 
-			position = rotatePosition(position, facing);
+			position = rotatePosition(position, facing).fma(0.0005f, normal);
 			Vector4f transformed = pose.pose().transform(new Vector4f(position.x(), position.y(), position.z(), 1.0f));
 
 			vertexConsumer.addVertex(transformed.x(), transformed.y(), transformed.z(), -1, vertex.u, vertex.v, OverlayTexture.NO_OVERLAY, lightCoords, normal.x(), normal.y(), normal.z());
@@ -150,7 +150,7 @@ public class LockerBlockEntityRenderer<T extends AccessoryBlockEntity> implement
 		for (int i = 0; i < face.vertices.size(); i++) {
 			MeshVertex vertex = face.vertices.get(i);
 			Vector3f modelOffset = new Vector3f(vertex.position).sub(accessoryTransform.modelOrigin).mul(scale);
-			Vector3f worldVertex = mapModelVector(modelOffset, new Vector3f(accessoryTransform.worldCenter), accessoryTransform.worldT, accessoryTransform.worldB, accessoryTransform.worldN);
+			Vector3f worldVertex = mapModelVector(modelOffset, new Vector3f(accessoryTransform.worldCenter), accessoryTransform.worldT, accessoryTransform.worldB, accessoryTransform.worldN).fma(0.0005f, faceNormal);
 			Vector4f transformed = pose.pose().transform(new Vector4f(worldVertex.x(), worldVertex.y(), worldVertex.z(), 1.0f));
 			vertexConsumer.addVertex(transformed.x(), transformed.y(), transformed.z(), -1, vertex.u, vertex.v, OverlayTexture.NO_OVERLAY, lightCoords, faceNormal.x(), faceNormal.y(), faceNormal.z());
 		}
