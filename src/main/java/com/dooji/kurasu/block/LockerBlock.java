@@ -187,8 +187,11 @@ public class LockerBlock extends BaseEntityBlock {
 						blockEntity.setStructureOpen(true);
 					}
 
-					armPlayerShove(state, level, pos, player);
-					player.sendOverlayMessage(Component.translatable("message.kurasu.locker_shove_ready"));
+					if (armPlayerShove(state, level, pos, player)) {
+						player.sendOverlayMessage(Component.translatable("message.kurasu.locker_shove_ready"));
+					} else {
+						player.sendOverlayMessage(Component.translatable("message.kurasu.locker_shove_cancelled"));
+					}
 					return InteractionResult.SUCCESS_SERVER;
 				}
 
@@ -421,9 +424,17 @@ public class LockerBlock extends BaseEntityBlock {
 		return server != null && (server.getPlayerList().isOp(player.nameAndId()) || server.isSingleplayerOwner(player.nameAndId()));
 	}
 
-	private void armPlayerShove(BlockState state, Level level, BlockPos pos, Player player) {
+	private boolean armPlayerShove(BlockState state, Level level, BlockPos pos, Player player) {
 		BlockPos controllerPos = findControllerPos(level, pos, state.getValue(BlockStateProperties.HORIZONTAL_FACING));
+		PendingShove pendingShove = PENDING_SHOVES.get(player.getUUID());
+
+		if (pendingShove != null && pendingShove.controllerPos().equals(controllerPos) && !pendingShove.expired(level.getGameTime())) {
+			PENDING_SHOVES.remove(player.getUUID());
+			return false;
+		}
+
 		PENDING_SHOVES.put(player.getUUID(), new PendingShove(controllerPos, state.getValue(BlockStateProperties.HORIZONTAL_FACING), level.getGameTime() + SHOVE_SELECT_TICKS));
+		return true;
 	}
 
 	private InteractionResult shovePlayerIntoLocker(Level level, BlockPos controllerPos, BlockState controllerState, LockerBlockEntity blockEntity, Player target) {
@@ -448,8 +459,21 @@ public class LockerBlock extends BaseEntityBlock {
 			return InteractionResult.PASS;
 		}
 
+		giveLockpickIfNeeded(target);
 		blockEntity.setStructureOpen(false);
 		return InteractionResult.SUCCESS_SERVER;
+	}
+
+	private void giveLockpickIfNeeded(Player player) {
+		if (player.getInventory().contains(stack -> stack.getItem() == KurasuItems.LOCKPICK)) {
+			return;
+		}
+
+		ItemStack lockpick = new ItemStack(KurasuItems.LOCKPICK);
+
+		if (!player.getInventory().add(lockpick)) {
+			player.drop(lockpick, false);
+		}
 	}
 
 	private AreaEffectCloud createLockerSeat(Level level, BlockPos pos, BlockState state) {
