@@ -13,8 +13,8 @@ import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.Permissions;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.InteractionHand;
@@ -229,7 +229,7 @@ public class LockerBlock extends BaseEntityBlock {
 			return InteractionResult.PASS;
 		}
 
-		if (blockEntity.isOperatorLocked() && !player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
+		if (blockEntity.isOperatorLocked() && !isOperator(player)) {
 			return InteractionResult.PASS;
 		}
 
@@ -246,14 +246,12 @@ public class LockerBlock extends BaseEntityBlock {
 			return InteractionResult.PASS;
 		}
 
+		if (itemStack.getItem() == KurasuItems.OP_TOOL) {
+			return useOperatorTool(level, pos, player);
+		}
+
 		if (itemStack.getItem() == KurasuItems.KEY) {
 			if (!level.isClientSide() && level.getBlockEntity(pos) instanceof LockerBlockEntity blockEntity) {
-				if (player.isShiftKeyDown() && player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
-					blockEntity.setOperatorLocked(!blockEntity.isOperatorLocked());
-					player.sendOverlayMessage(Component.translatable(blockEntity.isOperatorLocked() ? "message.kurasu.op_locked" : "message.kurasu.op_unlocked"));
-					return InteractionResult.SUCCESS_SERVER;
-				}
-
 				if (!canUseProtectedFeatures(player, blockEntity)) {
 					return InteractionResult.SUCCESS_SERVER;
 				}
@@ -269,6 +267,26 @@ public class LockerBlock extends BaseEntityBlock {
 		}
 
 		return super.useItemOn(itemStack, state, level, pos, player, hand, hitResult);
+	}
+
+	private InteractionResult useOperatorTool(Level level, BlockPos pos, Player player) {
+		if (level.isClientSide()) {
+			return InteractionResult.SUCCESS;
+		}
+
+		refreshStack(level, pos);
+
+		if (!isOperator(player)) {
+			player.sendOverlayMessage(Component.translatable("message.kurasu.op_only"));
+			return InteractionResult.SUCCESS_SERVER;
+		}
+
+		if (level.getBlockEntity(pos) instanceof LockerBlockEntity blockEntity) {
+			blockEntity.setOperatorLocked(!blockEntity.isOperatorLocked());
+			player.sendOverlayMessage(Component.translatable(blockEntity.isOperatorLocked() ? "message.kurasu.op_locked" : "message.kurasu.op_unlocked"));
+		}
+
+		return InteractionResult.SUCCESS_SERVER;
 	}
 
 	@Override
@@ -390,12 +408,17 @@ public class LockerBlock extends BaseEntityBlock {
 	}
 
 	private boolean canUseProtectedFeatures(Player player, LockerBlockEntity blockEntity) {
-		if (!blockEntity.isOperatorLocked() || player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
+		if (!blockEntity.isOperatorLocked() || isOperator(player)) {
 			return true;
 		}
 
 		player.sendOverlayMessage(Component.translatable("message.kurasu.op_only"));
 		return false;
+	}
+
+	private static boolean isOperator(Player player) {
+		MinecraftServer server = player.level().getServer();
+		return server != null && (server.getPlayerList().isOp(player.nameAndId()) || server.isSingleplayerOwner(player.nameAndId()));
 	}
 
 	private void armPlayerShove(BlockState state, Level level, BlockPos pos, Player player) {

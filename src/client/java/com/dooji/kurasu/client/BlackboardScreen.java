@@ -5,21 +5,16 @@ import com.dooji.kurasu.block.BlackboardBlock;
 import com.dooji.kurasu.block.entity.BlackboardBlockEntity;
 import com.dooji.kurasu.item.DrawData;
 import com.dooji.kurasu.network.SaveBlackboardPayload;
-import com.dooji.kurasu.network.ToggleOperatorLockPayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
 public class BlackboardScreen extends DrawScreen {
 	private final BlockPos blockPos;
-	private Button lockButton;
 
 	private BlackboardScreen(BlockPos blockPos, DrawData data) {
 		super(Mode.BLACKBOARD, BlackboardBlockEntity.DRAW_WIDTH, BlackboardBlockEntity.DRAW_HEIGHT, data);
@@ -33,7 +28,7 @@ public class BlackboardScreen extends DrawScreen {
 			return false;
 		}
 
-		if (KurasuItems.getChalkColor(minecraft.player.getMainHandItem()) != null) {
+		if (minecraft.player.getMainHandItem().getItem() == KurasuItems.OP_TOOL || KurasuItems.getChalkColor(minecraft.player.getMainHandItem()) != null) {
 			return false;
 		}
 
@@ -76,30 +71,6 @@ public class BlackboardScreen extends DrawScreen {
 		}
 
 		return super.mouseClicked(event, doubleClick);
-	}
-
-	@Override
-	protected void init() {
-		super.init();
-		int x = (this.width - 70) / 2;
-		int y = Math.max(0, Math.max(12, (this.height - 196) / 2) - 10);
-		this.lockButton = this.addRenderableWidget(
-			Button.builder(Component.translatable(this.isOperatorLocked() ? "gui.kurasu.op_unlock" : "gui.kurasu.op_lock"), button -> ClientPlayNetworking.send(new ToggleOperatorLockPayload(this.blockPos)))
-				.bounds(x, y, 70, 10)
-				.build()
-		);
-	}
-
-	@Override
-	public void extractRenderState(GuiGraphicsExtractor gfx, int mouseX, int mouseY, float partialTick) {
-		if (this.lockButton != null) {
-			this.lockButton.setMessage(Component.translatable(this.isOperatorLocked() ? "gui.kurasu.op_unlock" : "gui.kurasu.op_lock"));
-			this.lockButton.active = this.isOperator();
-			this.lockButton.setX((this.width - 70) / 2);
-			this.lockButton.setY(Math.max(0, Math.max(12, (this.height - 196) / 2) - 10));
-		}
-
-		super.extractRenderState(gfx, mouseX, mouseY, partialTick);
 	}
 
 	private boolean isOperator() {

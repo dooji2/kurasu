@@ -20,6 +20,7 @@ public class KurasuItems {
 	private static final Identifier BOOK_1_ID = Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "book_1");
 	private static final Identifier KEY_ID = Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "key");
 	private static final Identifier LOCKPICK_ID = Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "lockpick");
+	private static final Identifier OP_TOOL_ID = Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "op_tool");
 	private static final Identifier ERASER_ID = Identifier.fromNamespaceAndPath(Kurasu.MOD_ID, "eraser");
 	private static final ChalkVariantDefinition[] CHALK_VARIANT_DEFINITIONS = {
 		new ChalkVariantDefinition("chalk", 0xFFF0F0F0),
@@ -55,12 +56,14 @@ public class KurasuItems {
 	private static final ResourceKey<Item> BOOK_1_ITEM_KEY = ResourceKey.create(Registries.ITEM, BOOK_1_ID);
 	private static final ResourceKey<Item> KEY_ITEM_KEY = ResourceKey.create(Registries.ITEM, KEY_ID);
 	private static final ResourceKey<Item> LOCKPICK_ITEM_KEY = ResourceKey.create(Registries.ITEM, LOCKPICK_ID);
+	private static final ResourceKey<Item> OP_TOOL_ITEM_KEY = ResourceKey.create(Registries.ITEM, OP_TOOL_ID);
 	private static final ResourceKey<Item> ERASER_ITEM_KEY = ResourceKey.create(Registries.ITEM, ERASER_ID);
 
 	public static final Item STICKY_NOTE = registerItem(STICKY_NOTE_ID, new Item(new Item.Properties().setId(STICKY_NOTE_ITEM_KEY).useItemDescriptionPrefix()));
 	public static final Item BOOK_1 = registerItem(BOOK_1_ID, new WritableBookItem(new Item.Properties().setId(BOOK_1_ITEM_KEY).useItemDescriptionPrefix().stacksTo(1).component(DataComponents.WRITABLE_BOOK_CONTENT, WritableBookContent.EMPTY)));
 	public static final Item KEY = registerItem(KEY_ID, new KeyItem(new Item.Properties().setId(KEY_ITEM_KEY).useItemDescriptionPrefix().stacksTo(1)));
 	public static final Item LOCKPICK = registerItem(LOCKPICK_ID, new Item(new Item.Properties().setId(LOCKPICK_ITEM_KEY).useItemDescriptionPrefix().stacksTo(1).durability(24)));
+	public static final Item OP_TOOL = registerItem(OP_TOOL_ID, new Item(new Item.Properties().setId(OP_TOOL_ITEM_KEY).useItemDescriptionPrefix().stacksTo(1)));
 	private static final List<Item> CHALK_VARIANTS = registerChalkVariants();
 	public static final Item CHALK = CHALK_VARIANTS.getFirst();
 	public static final Item ERASER = registerItem(ERASER_ID, new ChalkItem(new Item.Properties().setId(ERASER_ITEM_KEY).useItemDescriptionPrefix().stacksTo(1), 0));

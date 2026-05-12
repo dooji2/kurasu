@@ -8,6 +8,7 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -90,6 +91,11 @@ public class SafeBlock extends BaseEntityBlock {
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
 		if (!level.isClientSide() && level.getBlockEntity(pos) instanceof SafeBlockEntity blockEntity) {
+			if (blockEntity.isOperatorLocked() && !isOperator(player)) {
+				player.sendOverlayMessage(Component.translatable("message.kurasu.op_only"));
+				return InteractionResult.SUCCESS_SERVER;
+			}
+
 			if (blockEntity.isStructureOpen()) {
 				blockEntity.setStructureState(false, true, "", false);
 				player.sendOverlayMessage(Component.translatable("message.kurasu.safe_locked"));
@@ -109,11 +115,38 @@ public class SafeBlock extends BaseEntityBlock {
 
 	@Override
 	protected InteractionResult useItemOn(ItemStack itemStack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
+		if (itemStack.getItem() == KurasuItems.OP_TOOL) {
+			return useOperatorTool(level, pos, player);
+		}
+
 		if (KurasuItems.getAccessoryId(itemStack) != null) {
 			return level.isClientSide() ? InteractionResult.SUCCESS : InteractionResult.SUCCESS_SERVER;
 		}
 
 		return super.useItemOn(itemStack, state, level, pos, player, hand, hitResult);
+	}
+
+	private InteractionResult useOperatorTool(Level level, BlockPos pos, Player player) {
+		if (level.isClientSide()) {
+			return InteractionResult.SUCCESS;
+		}
+
+		if (!isOperator(player)) {
+			player.sendOverlayMessage(Component.translatable("message.kurasu.op_only"));
+			return InteractionResult.SUCCESS_SERVER;
+		}
+
+		if (level.getBlockEntity(pos) instanceof SafeBlockEntity blockEntity) {
+			blockEntity.setOperatorLocked(!blockEntity.isOperatorLocked());
+			player.sendOverlayMessage(Component.translatable(blockEntity.isOperatorLocked() ? "message.kurasu.op_locked" : "message.kurasu.op_unlocked"));
+		}
+
+		return InteractionResult.SUCCESS_SERVER;
+	}
+
+	private static boolean isOperator(Player player) {
+		MinecraftServer server = player.level().getServer();
+		return server != null && (server.getPlayerList().isOp(player.nameAndId()) || server.isSingleplayerOwner(player.nameAndId()));
 	}
 
 	@Override

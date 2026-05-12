@@ -44,6 +44,7 @@ public class KurasuCreativeTabs {
 					output.accept(KurasuBlocks.DESK_1_ITEM);
 					output.accept(KurasuItems.KEY);
 					output.accept(KurasuItems.LOCKPICK);
+					output.accept(KurasuItems.OP_TOOL);
 					output.accept(KurasuItems.STICKY_NOTE);
 					output.accept(KurasuItems.BOOK_1);
 					output.accept(KurasuItems.ERASER);

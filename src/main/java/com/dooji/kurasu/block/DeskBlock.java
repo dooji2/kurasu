@@ -1,14 +1,17 @@
 package com.dooji.kurasu.block;
 
 import com.dooji.kurasu.KurasuBlockEntityTypes;
+import com.dooji.kurasu.KurasuItems;
 import com.dooji.kurasu.block.entity.AccessoryBlockEntity;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.permissions.Permissions;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -82,12 +85,22 @@ public class DeskBlock extends BaseEntityBlock {
 
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-		if (!player.isShiftKeyDown() || !player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
-			return InteractionResult.PASS;
+		return InteractionResult.PASS;
+	}
+
+	@Override
+	protected InteractionResult useItemOn(ItemStack itemStack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
+		if (itemStack.getItem() != KurasuItems.OP_TOOL) {
+			return super.useItemOn(itemStack, state, level, pos, player, hand, hitResult);
 		}
 
 		if (level.isClientSide()) {
 			return InteractionResult.SUCCESS;
+		}
+
+		if (!isOperator(player)) {
+			player.sendOverlayMessage(Component.translatable("message.kurasu.op_only"));
+			return InteractionResult.SUCCESS_SERVER;
 		}
 
 		if (level.getBlockEntity(pos) instanceof AccessoryBlockEntity blockEntity) {
@@ -96,6 +109,11 @@ public class DeskBlock extends BaseEntityBlock {
 		}
 
 		return InteractionResult.SUCCESS_SERVER;
+	}
+
+	private static boolean isOperator(Player player) {
+		MinecraftServer server = player.level().getServer();
+		return server != null && (server.getPlayerList().isOp(player.nameAndId()) || server.isSingleplayerOwner(player.nameAndId()));
 	}
 
 	private VoxelShape getStaticShape(BlockState state) {

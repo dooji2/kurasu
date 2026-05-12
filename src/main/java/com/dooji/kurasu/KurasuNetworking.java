@@ -18,8 +18,8 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.Permissions;
 import net.minecraft.world.item.ItemStack;
 
 public class KurasuNetworking {
@@ -165,6 +165,10 @@ public class KurasuNetworking {
 			return;
 		}
 
+		if (!canUseOperatorLocked(player, safe.isOperatorLocked(), true)) {
+			return;
+		}
+
 		switch (payload.action()) {
 			case SubmitSafeActionPayload.ACTION_SET_CODE -> setSafeCode(player, safe, payload.code());
 			case SubmitSafeActionPayload.ACTION_ENTER_CODE -> enterSafeCode(player, safe, payload.code());
@@ -258,7 +262,8 @@ public class KurasuNetworking {
 	}
 
 	private static boolean isOperator(ServerPlayer player) {
-		return player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
+		MinecraftServer server = player.level().getServer();
+		return server != null && (server.getPlayerList().isOp(player.nameAndId()) || server.isSingleplayerOwner(player.nameAndId()));
 	}
 
 	private static boolean isValidSafeCode(String code) {

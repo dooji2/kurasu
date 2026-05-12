@@ -78,6 +78,11 @@ public class AccessoryPlacementClient {
 		}
 
 		ItemStack heldItem = minecraft.player.getMainHandItem();
+
+		if (heldItem.getItem() == KurasuItems.OP_TOOL) {
+			return false;
+		}
+
 		String accessoryId = KurasuItems.getAccessoryId(heldItem);
 
 		if (accessoryId == null) {

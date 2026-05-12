@@ -1,12 +1,13 @@
 package com.dooji.kurasu.block;
 
 import com.dooji.kurasu.KurasuBlockEntityTypes;
+import com.dooji.kurasu.KurasuItems;
 import com.dooji.kurasu.block.entity.AccessoryBlockEntity;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.permissions.Permissions;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -91,21 +92,17 @@ public class ChairBlock extends BaseEntityBlock {
 
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
-		if (player.isShiftKeyDown()) {
-			return tryToggleOperatorLock(level, pos, player);
-		}
-
 		return trySit(state, level, pos, player);
 	}
 
 	@Override
 	protected InteractionResult useItemOn(ItemStack itemStack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
-		if (!itemStack.isEmpty()) {
-			return super.useItemOn(itemStack, state, level, pos, player, hand, hitResult);
+		if (itemStack.getItem() == KurasuItems.OP_TOOL) {
+			return tryToggleOperatorLock(level, pos, player);
 		}
 
-		if (player.isShiftKeyDown()) {
-			return tryToggleOperatorLock(level, pos, player);
+		if (!itemStack.isEmpty()) {
+			return super.useItemOn(itemStack, state, level, pos, player, hand, hitResult);
 		}
 
 		return trySit(state, level, pos, player);
@@ -138,6 +135,11 @@ public class ChairBlock extends BaseEntityBlock {
 			return InteractionResult.SUCCESS;
 		}
 
+		if (level.getBlockEntity(pos) instanceof AccessoryBlockEntity blockEntity && blockEntity.isOperatorLocked() && !isOperator(player)) {
+			player.sendOverlayMessage(Component.translatable("message.kurasu.op_only"));
+			return InteractionResult.SUCCESS_SERVER;
+		}
+
 		AreaEffectCloud existingSeat = findChairSeat(level, pos);
 
 		if (existingSeat != null) {
@@ -159,12 +161,13 @@ public class ChairBlock extends BaseEntityBlock {
 	}
 
 	private InteractionResult tryToggleOperatorLock(Level level, BlockPos pos, Player player) {
-		if (!player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
-			return InteractionResult.PASS;
-		}
-
 		if (level.isClientSide()) {
 			return InteractionResult.SUCCESS;
+		}
+
+		if (!isOperator(player)) {
+			player.sendOverlayMessage(Component.translatable("message.kurasu.op_only"));
+			return InteractionResult.SUCCESS_SERVER;
 		}
 
 		if (level.getBlockEntity(pos) instanceof AccessoryBlockEntity blockEntity) {
@@ -173,6 +176,11 @@ public class ChairBlock extends BaseEntityBlock {
 		}
 
 		return InteractionResult.SUCCESS_SERVER;
+	}
+
+	private static boolean isOperator(Player player) {
+		MinecraftServer server = player.level().getServer();
+		return server != null && (server.getPlayerList().isOp(player.nameAndId()) || server.isSingleplayerOwner(player.nameAndId()));
 	}
 
 	private AreaEffectCloud createChairSeat(Level level, BlockPos pos, BlockState state) {

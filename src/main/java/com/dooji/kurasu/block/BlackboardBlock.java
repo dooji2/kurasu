@@ -1,11 +1,17 @@
 package com.dooji.kurasu.block;
 
+import com.dooji.kurasu.KurasuItems;
 import com.dooji.kurasu.block.entity.BlackboardBlockEntity;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
@@ -24,6 +30,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
@@ -149,9 +156,37 @@ public class BlackboardBlock extends BaseEntityBlock {
 		return new BlackboardBlockEntity(pos, state);
 	}
 
+	@Override
+	protected InteractionResult useItemOn(ItemStack itemStack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
+		if (itemStack.getItem() != KurasuItems.OP_TOOL) {
+			return super.useItemOn(itemStack, state, level, pos, player, hand, hitResult);
+		}
+
+		if (level.isClientSide()) {
+			return InteractionResult.SUCCESS;
+		}
+
+		if (!isOperator(player)) {
+			player.sendOverlayMessage(Component.translatable("message.kurasu.op_only"));
+			return InteractionResult.SUCCESS_SERVER;
+		}
+
+		if (level.getBlockEntity(getAnchorPos(pos, state)) instanceof BlackboardBlockEntity blockEntity) {
+			blockEntity.setOperatorLocked(!blockEntity.isOperatorLocked());
+			player.sendOverlayMessage(Component.translatable(blockEntity.isOperatorLocked() ? "message.kurasu.op_locked" : "message.kurasu.op_unlocked"));
+		}
+
+		return InteractionResult.SUCCESS_SERVER;
+	}
+
 	public BlockPos getAnchorPos(BlockPos pos, BlockState state) {
 		BlockPos anchorPos = state.getValue(BlockStateProperties.DOUBLE_BLOCK_HALF) == DoubleBlockHalf.UPPER ? pos.below() : pos;
 		return anchorPos.relative(state.getValue(BlockStateProperties.HORIZONTAL_FACING).getClockWise(), state.getValue(SECTION));
+	}
+
+	private static boolean isOperator(Player player) {
+		MinecraftServer server = player.level().getServer();
+		return server != null && (server.getPlayerList().isOp(player.nameAndId()) || server.isSingleplayerOwner(player.nameAndId()));
 	}
 
 	private boolean canPlaceStructure(Level level, BlockPos anchorPos, Direction facing) {
