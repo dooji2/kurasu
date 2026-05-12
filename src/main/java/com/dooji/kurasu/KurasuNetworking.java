@@ -1,5 +1,6 @@
 package com.dooji.kurasu;
 
+import com.dooji.kurasu.block.LockerBlock;
 import com.dooji.kurasu.block.entity.AccessoryBlockEntity;
 import com.dooji.kurasu.block.entity.BlackboardBlockEntity;
 import com.dooji.kurasu.block.entity.LockerBlockEntity;
@@ -20,6 +21,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 
 public class KurasuNetworking {
@@ -51,7 +53,7 @@ public class KurasuNetworking {
 			return;
 		}
 
-		if (!canUseOperatorLocked(player, locker.isOperatorLocked(), true)) {
+		if (!canUseLockedLocker(player, payload.blockPos(), locker)) {
 			return;
 		}
 
@@ -259,6 +261,20 @@ public class KurasuNetworking {
 		}
 
 		return false;
+	}
+
+	private static boolean canUseLockedLocker(ServerPlayer player, BlockPos blockPos, LockerBlockEntity locker) {
+		if (!locker.isOperatorLocked() || isOperator(player) || isInsideLocker(player, blockPos)) {
+			return true;
+		}
+
+		player.sendOverlayMessage(Component.translatable("message.kurasu.op_only"));
+		return false;
+	}
+
+	private static boolean isInsideLocker(ServerPlayer player, BlockPos blockPos) {
+		Entity vehicle = player.getVehicle();
+		return LockerBlock.isLockerSeat(vehicle) && BlockPos.containing(vehicle.position()).equals(blockPos);
 	}
 
 	private static boolean isOperator(ServerPlayer player) {
