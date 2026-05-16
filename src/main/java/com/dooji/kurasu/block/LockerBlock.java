@@ -2,6 +2,7 @@ package com.dooji.kurasu.block;
 
 import com.dooji.kurasu.KurasuBlockEntityTypes;
 import com.dooji.kurasu.KurasuItems;
+import com.dooji.kurasu.KurasuPermissions;
 import com.dooji.kurasu.block.entity.LockerBlockEntity;
 import com.dooji.kurasu.item.KeyItem;
 import com.mojang.serialization.MapCodec;
@@ -13,7 +14,6 @@ import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.StringRepresentable;
@@ -232,7 +232,7 @@ public class LockerBlock extends BaseEntityBlock {
 			return InteractionResult.PASS;
 		}
 
-		if (blockEntity.isOperatorLocked() && !isOperator(player)) {
+		if (blockEntity.isOperatorLocked() && !KurasuPermissions.canSwitchGameModes(player)) {
 			return InteractionResult.PASS;
 		}
 
@@ -279,7 +279,7 @@ public class LockerBlock extends BaseEntityBlock {
 
 		refreshStack(level, pos);
 
-		if (!isOperator(player)) {
+		if (!KurasuPermissions.canSwitchGameModes(player)) {
 			player.sendOverlayMessage(Component.translatable("message.kurasu.op_only"));
 			return InteractionResult.SUCCESS_SERVER;
 		}
@@ -411,17 +411,12 @@ public class LockerBlock extends BaseEntityBlock {
 	}
 
 	private boolean canUseProtectedFeatures(Player player, LockerBlockEntity blockEntity) {
-		if (!blockEntity.isOperatorLocked() || isOperator(player)) {
+		if (!blockEntity.isOperatorLocked() || KurasuPermissions.canSwitchGameModes(player)) {
 			return true;
 		}
 
 		player.sendOverlayMessage(Component.translatable("message.kurasu.op_only"));
 		return false;
-	}
-
-	private static boolean isOperator(Player player) {
-		MinecraftServer server = player.level().getServer();
-		return server != null && (server.getPlayerList().isOp(player.nameAndId()) || server.isSingleplayerOwner(player.nameAndId()));
 	}
 
 	private boolean armPlayerShove(BlockState state, Level level, BlockPos pos, Player player) {

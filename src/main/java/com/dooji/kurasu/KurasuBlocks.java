@@ -62,10 +62,10 @@ public class KurasuBlocks {
 	public static final SafeBlock SAFE = registerBlock(SAFE_ID, new SafeBlock(BlockBehaviour.Properties.of().setId(SAFE_BLOCK_KEY).strength(2.0f).noOcclusion()));
 	public static final BlackboardBlock BLACKBOARD = registerBlock(BLACKBOARD_ID, new BlackboardBlock(BlockBehaviour.Properties.of().setId(BLACKBOARD_BLOCK_KEY).strength(2.0f).noOcclusion()));
 	public static final BlackboardBlock BLACKBOARD_1 = registerBlock(BLACKBOARD_1_ID, new BlackboardBlock(BlockBehaviour.Properties.of().setId(BLACKBOARD_1_BLOCK_KEY).strength(2.0f).noOcclusion()));
-	public static final Block CONCRETE_WALL = registerBlock(CONCRETE_WALL_ID, new SimpleHorizontalBlock(BlockBehaviour.Properties.of().setId(CONCRETE_WALL_BLOCK_KEY).strength(2.0f).noOcclusion()));
-	public static final Block CONCRETE_WALL_BOTTOM = registerBlock(CONCRETE_WALL_BOTTOM_ID, new SimpleHorizontalBlock(BlockBehaviour.Properties.of().setId(CONCRETE_WALL_BOTTOM_BLOCK_KEY).strength(2.0f).noOcclusion()));
-	public static final Block CONCRETE_WALL_BOTTOM_LEFT = registerBlock(CONCRETE_WALL_BOTTOM_LEFT_ID, new SimpleHorizontalBlock(BlockBehaviour.Properties.of().setId(CONCRETE_WALL_BOTTOM_LEFT_BLOCK_KEY).strength(2.0f).noOcclusion()));
-	public static final Block CONCRETE_WALL_BOTTOM_RIGHT = registerBlock(CONCRETE_WALL_BOTTOM_RIGHT_ID, new SimpleHorizontalBlock(BlockBehaviour.Properties.of().setId(CONCRETE_WALL_BOTTOM_RIGHT_BLOCK_KEY).strength(2.0f).noOcclusion()));
+	public static final Block CONCRETE_WALL = registerBlock(CONCRETE_WALL_ID, new SimpleHorizontalBlock(BlockBehaviour.Properties.of().setId(CONCRETE_WALL_BLOCK_KEY).strength(2.0f)));
+	public static final Block CONCRETE_WALL_BOTTOM = registerBlock(CONCRETE_WALL_BOTTOM_ID, new SimpleHorizontalBlock(BlockBehaviour.Properties.of().setId(CONCRETE_WALL_BOTTOM_BLOCK_KEY).strength(2.0f)));
+	public static final Block CONCRETE_WALL_BOTTOM_LEFT = registerBlock(CONCRETE_WALL_BOTTOM_LEFT_ID, new SimpleHorizontalBlock(BlockBehaviour.Properties.of().setId(CONCRETE_WALL_BOTTOM_LEFT_BLOCK_KEY).strength(2.0f)));
+	public static final Block CONCRETE_WALL_BOTTOM_RIGHT = registerBlock(CONCRETE_WALL_BOTTOM_RIGHT_ID, new SimpleHorizontalBlock(BlockBehaviour.Properties.of().setId(CONCRETE_WALL_BOTTOM_RIGHT_BLOCK_KEY).strength(2.0f)));
 	public static final ChairBlock CHAIR = registerBlock(CHAIR_ID, new ChairBlock(BlockBehaviour.Properties.of().setId(CHAIR_BLOCK_KEY).strength(2.0f).noOcclusion()));
 	public static final ChairBlock CHAIR_1 = registerBlock(CHAIR_1_ID, new ChairBlock(BlockBehaviour.Properties.of().setId(CHAIR_1_BLOCK_KEY).strength(2.0f).noOcclusion()));
 	public static final DeskBlock DESK = registerBlock(DESK_ID, new DeskBlock(BlockBehaviour.Properties.of().setId(DESK_BLOCK_KEY).strength(2.0f).noOcclusion()));

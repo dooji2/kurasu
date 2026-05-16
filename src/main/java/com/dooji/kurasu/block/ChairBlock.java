@@ -2,12 +2,12 @@ package com.dooji.kurasu.block;
 
 import com.dooji.kurasu.KurasuBlockEntityTypes;
 import com.dooji.kurasu.KurasuItems;
+import com.dooji.kurasu.KurasuPermissions;
 import com.dooji.kurasu.block.entity.AccessoryBlockEntity;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -135,7 +135,7 @@ public class ChairBlock extends BaseEntityBlock {
 			return InteractionResult.SUCCESS;
 		}
 
-		if (level.getBlockEntity(pos) instanceof AccessoryBlockEntity blockEntity && blockEntity.isOperatorLocked() && !isOperator(player)) {
+		if (level.getBlockEntity(pos) instanceof AccessoryBlockEntity blockEntity && blockEntity.isOperatorLocked() && !KurasuPermissions.canSwitchGameModes(player)) {
 			player.sendOverlayMessage(Component.translatable("message.kurasu.op_only"));
 			return InteractionResult.SUCCESS_SERVER;
 		}
@@ -165,7 +165,7 @@ public class ChairBlock extends BaseEntityBlock {
 			return InteractionResult.SUCCESS;
 		}
 
-		if (!isOperator(player)) {
+		if (!KurasuPermissions.canSwitchGameModes(player)) {
 			player.sendOverlayMessage(Component.translatable("message.kurasu.op_only"));
 			return InteractionResult.SUCCESS_SERVER;
 		}
@@ -176,11 +176,6 @@ public class ChairBlock extends BaseEntityBlock {
 		}
 
 		return InteractionResult.SUCCESS_SERVER;
-	}
-
-	private static boolean isOperator(Player player) {
-		MinecraftServer server = player.level().getServer();
-		return server != null && (server.getPlayerList().isOp(player.nameAndId()) || server.isSingleplayerOwner(player.nameAndId()));
 	}
 
 	private AreaEffectCloud createChairSeat(Level level, BlockPos pos, BlockState state) {

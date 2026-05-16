@@ -253,13 +253,11 @@ public abstract class DrawScreen extends Screen {
 		if (this.isInside(mouseX, mouseY, this.canvasDrawLeft(), this.canvasDrawTop(), this.canvasDrawWidth(), this.canvasDrawHeight())) {
 			int newZoom = Mth.clamp(this.zoom + (scrollY > 0.0 ? 1 : -1), 1, MAX_ZOOM);
 			if (newZoom != this.zoom) {
-				int drawLeft = this.canvasDrawLeft();
-				int drawTop = this.canvasDrawTop();
-				double pixelX = this.sourceX() + (mouseX - drawLeft) / this.zoom;
-				double pixelY = this.sourceY() + (mouseY - drawTop) / this.zoom;
+				double pixelX = this.sourceX() + (mouseX - this.canvasDrawLeft()) * this.sourceWidth() / this.canvasDrawWidth();
+				double pixelY = this.sourceY() + (mouseY - this.canvasDrawTop()) * this.sourceHeight() / this.canvasDrawHeight();
 				this.zoom = newZoom;
-				this.viewX = pixelX - (mouseX - this.canvasDrawLeft()) / this.zoom;
-				this.viewY = pixelY - (mouseY - this.canvasDrawTop()) / this.zoom;
+				this.viewX = pixelX - (mouseX - this.canvasDrawLeft()) * this.sourceWidth() / this.canvasDrawWidth();
+				this.viewY = pixelY - (mouseY - this.canvasDrawTop()) * this.sourceHeight() / this.canvasDrawHeight();
 				this.clampView();
 			}
 
@@ -676,12 +674,12 @@ public abstract class DrawScreen extends Screen {
 	}
 
 	private int mouseToCanvasX(double mouseX) {
-		double pixel = this.sourceX() + (mouseX - this.canvasDrawLeft()) / this.zoom;
+		double pixel = this.sourceX() + (mouseX - this.canvasDrawLeft()) * this.sourceWidth() / this.canvasDrawWidth();
 		return Mth.clamp(Mth.floor(pixel), 0, this.canvasWidth - 1);
 	}
 
 	private int mouseToCanvasY(double mouseY) {
-		double pixel = this.sourceY() + (mouseY - this.canvasDrawTop()) / this.zoom;
+		double pixel = this.sourceY() + (mouseY - this.canvasDrawTop()) * this.sourceHeight() / this.canvasDrawHeight();
 		return Mth.clamp(Mth.floor(pixel), 0, this.canvasHeight - 1);
 	}
 

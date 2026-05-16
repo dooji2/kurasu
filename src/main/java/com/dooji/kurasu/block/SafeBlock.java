@@ -2,13 +2,13 @@ package com.dooji.kurasu.block;
 
 import com.dooji.kurasu.KurasuBlockEntityTypes;
 import com.dooji.kurasu.KurasuItems;
+import com.dooji.kurasu.KurasuPermissions;
 import com.dooji.kurasu.block.entity.LockerBlockEntity;
 import com.dooji.kurasu.block.entity.SafeBlockEntity;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -91,7 +91,7 @@ public class SafeBlock extends BaseEntityBlock {
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
 		if (!level.isClientSide() && level.getBlockEntity(pos) instanceof SafeBlockEntity blockEntity) {
-			if (blockEntity.isOperatorLocked() && !isOperator(player)) {
+			if (blockEntity.isOperatorLocked() && !KurasuPermissions.canSwitchGameModes(player)) {
 				player.sendOverlayMessage(Component.translatable("message.kurasu.op_only"));
 				return InteractionResult.SUCCESS_SERVER;
 			}
@@ -131,7 +131,7 @@ public class SafeBlock extends BaseEntityBlock {
 			return InteractionResult.SUCCESS;
 		}
 
-		if (!isOperator(player)) {
+		if (!KurasuPermissions.canSwitchGameModes(player)) {
 			player.sendOverlayMessage(Component.translatable("message.kurasu.op_only"));
 			return InteractionResult.SUCCESS_SERVER;
 		}
@@ -142,11 +142,6 @@ public class SafeBlock extends BaseEntityBlock {
 		}
 
 		return InteractionResult.SUCCESS_SERVER;
-	}
-
-	private static boolean isOperator(Player player) {
-		MinecraftServer server = player.level().getServer();
-		return server != null && (server.getPlayerList().isOp(player.nameAndId()) || server.isSingleplayerOwner(player.nameAndId()));
 	}
 
 	@Override
