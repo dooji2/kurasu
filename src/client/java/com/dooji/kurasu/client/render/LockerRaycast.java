@@ -1,6 +1,7 @@
 package com.dooji.kurasu.client.render;
 
 import com.dooji.kurasu.Kurasu;
+import com.dooji.kurasu.block.LockerBlock;
 import com.dooji.kurasu.block.entity.AccessoryBlockEntity;
 import com.dooji.kurasu.block.entity.AccessoryBlockEntity.PlacedAccessory;
 import com.dooji.kurasu.block.entity.LockerBlockEntity;
@@ -39,7 +40,9 @@ public class LockerRaycast {
 
 	private static boolean isStorageHit(Level level, BlockHitResult blockHit) {
 		BlockPos blockPos = blockHit.getBlockPos();
-		return ObjModels.getSurfaceMesh(level, blockPos, level.getBlockState(blockPos)) != null;
+		BlockState state = level.getBlockState(blockPos);
+		BlockPos blockEntityPos = raycastOwnerPos(level, blockPos, state);
+		return ObjModels.getSurfaceMesh(level, blockEntityPos, level.getBlockState(blockEntityPos)) != null;
 	}
 
 	private static Hit raycast(Level level, Vec3 start, Vec3 end, double maxDistance, AccessoryHitMode accessoryHitMode) {
@@ -63,11 +66,7 @@ public class LockerRaycast {
 
 		for (BlockPos candidatePos : BlockPos.betweenClosed(minX, minY, minZ, maxX, maxY, maxZ)) {
 			BlockState state = level.getBlockState(candidatePos);
-			BlockPos blockEntityPos = candidatePos.immutable();
-
-			if (state.getBlock() instanceof BlackboardBlock blackboard) {
-				blockEntityPos = blackboard.getAnchorPos(blockEntityPos, state).immutable();
-			}
+			BlockPos blockEntityPos = raycastOwnerPos(level, candidatePos, state);
 
 			if (!testedPositions.add(blockEntityPos)) {
 				continue;
@@ -86,6 +85,33 @@ public class LockerRaycast {
 		}
 
 		return bestHit;
+	}
+
+	private static BlockPos raycastOwnerPos(Level level, BlockPos pos, BlockState state) {
+		BlockPos blockEntityPos = pos.immutable();
+
+		if (state.getBlock() instanceof BlackboardBlock blackboard) {
+			return blackboard.getAnchorPos(blockEntityPos, state).immutable();
+		}
+
+		if (isDoubleLockerTop(level, blockEntityPos, state)) {
+			return blockEntityPos.below().immutable();
+		}
+
+		return blockEntityPos;
+	}
+
+	private static boolean isDoubleLockerTop(Level level, BlockPos pos, BlockState state) {
+		if (!(state.getBlock() instanceof LockerBlock) || state.getValue(LockerBlock.PART) != LockerBlock.Part.TOP) {
+			return false;
+		}
+
+		Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
+		return matchesLocker(level.getBlockState(pos.below()), state, facing) && !matchesLocker(level.getBlockState(pos.below().below()), state, facing);
+	}
+
+	private static boolean matchesLocker(BlockState candidateState, BlockState state, Direction facing) {
+		return candidateState.getBlock() == state.getBlock() && candidateState.getValue(BlockStateProperties.HORIZONTAL_FACING) == facing;
 	}
 
 	private static Hit raycastSurface(Level level, BlockPos blockPos, BlockState state, Vec3 start, Vec3 rayDirection, double maxDistance, AccessoryHitMode accessoryHitMode) {
@@ -163,11 +189,17 @@ public class LockerRaycast {
 			worldVerts[i] = rotatePosition(position, facing).add(basePos.getX(), basePos.getY(), basePos.getZ());
 		}
 
-		Vector3f normal = new Vector3f(face.normal).normalize();
-		return raycastFace(basePos, face.partName, -1, start, rayDirection, maxDistance, worldVerts, localVerts, normal);
+		Vector3f localNormal = new Vector3f(face.normal);
+
+		if (doorPivot != null && "door".equalsIgnoreCase(face.partName)) {
+			localNormal.rotateY(doorAngle);
+		}
+
+		Vector3f worldNormal = rotateNormal(new Vector3f(localNormal), facing).normalize();
+		return raycastFace(basePos, face.partName, -1, start, rayDirection, maxDistance, worldVerts, localVerts, new Vector3f(face.normal).normalize(), worldNormal);
 	}
 
-	private static Hit raycastFace(BlockPos basePos, String partName, int accessoryIndex, Vec3 start, Vec3 rayDirection, double maxDistance, Vector3f[] worldVerts, Vector3f[] localVerts, Vector3f normal) {
+	private static Hit raycastFace(BlockPos basePos, String partName, int accessoryIndex, Vec3 start, Vec3 rayDirection, double maxDistance, Vector3f[] worldVerts, Vector3f[] localVerts, Vector3f normal, Vector3f worldNormal) {
 		Vector3f tangent = new Vector3f(localVerts[1]).sub(localVerts[0]);
 		Vector3f bitangent = new Vector3f(localVerts[3]).sub(localVerts[0]);
 
@@ -177,8 +209,8 @@ public class LockerRaycast {
 
 		tangent.normalize();
 		bitangent.normalize();
-		Hit h0 = raycastTriangle(basePos, partName, accessoryIndex, start, rayDirection, maxDistance, worldVerts[0], worldVerts[1], worldVerts[2], localVerts[0], localVerts[1], localVerts[2], normal, tangent, bitangent);
-		Hit h1 = raycastTriangle(basePos, partName, accessoryIndex, start, rayDirection, maxDistance, worldVerts[0], worldVerts[2], worldVerts[3], localVerts[0], localVerts[2], localVerts[3], normal, tangent, bitangent);
+		Hit h0 = raycastTriangle(basePos, partName, accessoryIndex, start, rayDirection, maxDistance, worldVerts[0], worldVerts[1], worldVerts[2], localVerts[0], localVerts[1], localVerts[2], normal, worldNormal, tangent, bitangent);
+		Hit h1 = raycastTriangle(basePos, partName, accessoryIndex, start, rayDirection, maxDistance, worldVerts[0], worldVerts[2], worldVerts[3], localVerts[0], localVerts[2], localVerts[3], normal, worldNormal, tangent, bitangent);
 
 		if (h0 == null) {
 			return h1;
@@ -230,7 +262,8 @@ public class LockerRaycast {
 				}
 
 				Vector3f normal = mapModelVector(new Vector3f(face.normal), new Vector3f(), localT, localB, localN).normalize();
-				Hit hit = raycastFace(basePos, accessory.partName(), accessoryIndex, start, rayDirection, maxDistance, worldVerts, localVerts, normal);
+				Vector3f worldNormal = mapModelVector(new Vector3f(face.normal), new Vector3f(), worldT, worldB, worldN).normalize();
+				Hit hit = raycastFace(basePos, accessory.partName(), accessoryIndex, start, rayDirection, maxDistance, worldVerts, localVerts, normal, worldNormal);
 
 				if (hit != null && (bestHit == null || hit.distance < bestHit.distance)) {
 					bestHit = hit;
@@ -242,10 +275,15 @@ public class LockerRaycast {
 		return bestHit;
 	}
 
-	private static Hit raycastTriangle(BlockPos basePos, String partName, int accessoryIndex, Vec3 start, Vec3 rayDir, double maxDistance, Vector3f wa, Vector3f wb, Vector3f wc, Vector3f la, Vector3f lb, Vector3f lc, Vector3f normal, Vector3f tangent, Vector3f bitangent) {
+	private static Hit raycastTriangle(BlockPos basePos, String partName, int accessoryIndex, Vec3 start, Vec3 rayDir, double maxDistance, Vector3f wa, Vector3f wb, Vector3f wc, Vector3f la, Vector3f lb, Vector3f lc, Vector3f normal, Vector3f worldNormal, Vector3f tangent, Vector3f bitangent) {
 		Vector3f v0v1 = new Vector3f(wb).sub(wa);
 		Vector3f v0v2 = new Vector3f(wc).sub(wa);
 		Vector3f rayVec = new Vector3f((float) rayDir.x, (float) rayDir.y, (float) rayDir.z);
+
+		if (rayVec.dot(worldNormal) >= -0.000001f) {
+			return null;
+		}
+
 		Vector3f pvec = new Vector3f(rayVec).cross(v0v2);
 		float det = v0v1.dot(pvec);
 
@@ -288,6 +326,15 @@ public class LockerRaycast {
 			case WEST -> new Vector3f(position.z(), position.y(), 1.0f - position.x());
 			case EAST -> new Vector3f(1.0f - position.z(), position.y(), position.x());
 			default -> new Vector3f(position);
+		};
+	}
+
+	private static Vector3f rotateNormal(Vector3f normal, Direction facing) {
+		return switch (facing) {
+			case SOUTH -> new Vector3f(-normal.x(), normal.y(), -normal.z());
+			case WEST -> new Vector3f(normal.z(), normal.y(), -normal.x());
+			case EAST -> new Vector3f(-normal.z(), normal.y(), normal.x());
+			default -> new Vector3f(normal);
 		};
 	}
 
